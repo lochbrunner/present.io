@@ -1,4 +1,4 @@
-import reducer from './reducers';
+import reducer, { Action } from './reducers';
 import { createStore } from 'redux'
 
 export interface Vector {
@@ -13,10 +13,12 @@ export interface Extent {
 export interface Rectangle {
     center: Vector;
     extent: Extent;
+    name: string;
+    isSelected: boolean;
 }
 
 export interface State {
     objects: Rectangle[];
 }
 
-export default createStore<State, any, any, any>(reducer, undefined, (window as any).__REDUX_DEVTOOLS_EXTENSION__?.());
+export default createStore<State, Action, any, any>(reducer, undefined, (window as any).__REDUX_DEVTOOLS_EXTENSION__?.());

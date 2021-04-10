@@ -1,0 +1,16 @@
+.tools {
+    position: absolute;
+    top: var(--header-height);
+    width: calc(var(--tools-width) - 1px);
+    height: calc(100% - var(--header-height));
+    border-right: solid 1px #eee;
+
+    > div {
+        cursor: pointer;
+        &.active {
+            background-color: #ddf;
+        }
+        &.passive {
+        }
+    }
+}

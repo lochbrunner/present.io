@@ -1,0 +1,21 @@
+.outliner {
+    position: absolute;
+    top: var(--header-height);
+    right: 0;
+    width: calc(var(--outliner-width) - 1px);
+    height: calc(100% - var(--header-height));
+    border-left: solid 1px #eee;
+    overflow: scroll;
+
+    .item {
+        background-color: #f8f8f8;
+        padding: 0 10px;
+        border: solid 1px #eee;
+        &.selected {
+            background-color: #ddf;
+        }
+
+        cursor: pointer;
+        user-select: none;
+    }
+}

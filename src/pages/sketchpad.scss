@@ -1,3 +1,7 @@
+body {
+    font-family: "Roboto", sans-serif;
+}
+
 .sketchpad {
     position: absolute;
     top: 0;
@@ -15,24 +19,6 @@
         background-color: #f8f8f8;
         border-bottom: solid 1px #eee;
         height: calc(var(--header-height) - 1px);
-    }
-
-    .tools {
-        position: absolute;
-        top: var(--header-height);
-        width: calc(var(--tools-width) - 1px);
-        height: calc(100% - var(--header-height));
-        border-right: solid 1px #eee;
-    }
-
-    .outliner {
-        position: absolute;
-        top: var(--header-height);
-        right: 0;
-        width: calc(var(--outliner-width) - 1px);
-        height: calc(100% - var(--header-height));
-        border-left: solid 1px #eee;
-        overflow: scroll;
     }
 
     .main {
