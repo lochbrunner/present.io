@@ -1,10 +1,15 @@
 
-import { State } from '../store';
+import { Rectangle, State } from '../store';
 
-export default (state: State = { value: 0 }, action: { type: string }) => {
+interface Action {
+    type: string;
+    object: Rectangle;
+}
+
+export default (state: State = { objects: [] }, action: Action) => {
     switch (action.type) {
-        case 'increase':
-            return { ...state, value: state.value + 1 }
+        case 'add':
+            return { ...state, objects: [...state.objects, action.object] }
         default:
             return state;
     }

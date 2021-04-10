@@ -1,0 +1,50 @@
+.sketchpad {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+
+    --tools-width: 200px;
+    --outliner-width: 200px;
+    --header-height: 40px;
+
+    header {
+        position: absolute;
+        width: 100%;
+        background-color: #f8f8f8;
+        border-bottom: solid 1px #eee;
+        height: calc(var(--header-height) - 1px);
+    }
+
+    .tools {
+        position: absolute;
+        top: var(--header-height);
+        width: calc(var(--tools-width) - 1px);
+        height: calc(100% - var(--header-height));
+        border-right: solid 1px #eee;
+    }
+
+    .outliner {
+        position: absolute;
+        top: var(--header-height);
+        right: 0;
+        width: calc(var(--outliner-width) - 1px);
+        height: calc(100% - var(--header-height));
+        border-left: solid 1px #eee;
+        overflow: scroll;
+    }
+
+    .main {
+        position: absolute;
+        top: var(--header-height);
+        height: calc(100% - var(--header-height));
+        left: var(--tools-width);
+        right: var(--outliner-width);
+
+        svg {
+            width: 100%;
+            height: calc(100% - 4px);
+        }
+    }
+}

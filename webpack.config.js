@@ -11,8 +11,8 @@ var outPath = path.join(__dirname, './dist');
 // plugins
 var HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
-// const ReactRefreshWebpackPlugin =
-//     require('@pmmmwh/react-refresh-webpack-plugin');
+const ReactRefreshWebpackPlugin =
+    require('@pmmmwh/react-refresh-webpack-plugin');
 
 module.exports = {
   context: sourcePath,
@@ -54,9 +54,6 @@ module.exports = {
         use: [
           {
             loader: MiniCssExtractPlugin.loader,
-            options: {
-              hmr: process.env.NODE_ENV === 'development',
-            },
           },
           'css-loader',
           'postcss-loader',
@@ -77,7 +74,7 @@ module.exports = {
       chunkFilename: !isProduction ? '[id].css' : '[id].[hash].css',
     }),
     new HtmlWebpackPlugin({template: 'index.html'}),
-    // new ReactRefreshWebpackPlugin(),
+    new ReactRefreshWebpackPlugin(),
   ],
   devtool: 'eval-source-map',
   devServer: {
