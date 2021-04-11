@@ -1,11 +1,5 @@
 .outliner {
-    position: absolute;
-    top: var(--header-height);
-    right: 0;
-    width: calc(var(--outliner-width) - 1px);
-    height: calc(100% - var(--header-height));
-    border-left: solid 1px #eee;
-    overflow: scroll;
+    overflow-y: auto;
 
     .item {
         background-color: #f8f8f8;

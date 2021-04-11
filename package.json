@@ -55,6 +55,7 @@
     "classnames": "^2.3.1",
     "harmony": "^1.5.1",
     "lodash": "^4.17.21",
+    "material-ui-color": "^1.1.0",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "react-redux": "^7.2.3",

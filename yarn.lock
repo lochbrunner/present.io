@@ -3341,6 +3341,11 @@ map-visit@^1.0.0:
   dependencies:
     object-visit "^1.0.0"
 
+material-ui-color@^1.1.0:
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/material-ui-color/-/material-ui-color-1.1.0.tgz#e88f9deca2da32bd2fb736b00d6a4ac243bf739b"
+  integrity sha512-kpqz64/4/37hipka6CtFFYD9NkXmmdvKKoK3qz7b+HyIump81ucZ5m7OJaoQ3Y/wxrBG0O4c54g5xnY0IKXsgQ==
+
 media-typer@0.3.0:
   version "0.3.0"
   resolved "https://registry.yarnpkg.com/media-typer/-/media-typer-0.3.0.tgz#8710d7af0aa626f8fffa1ce00168545263255748"

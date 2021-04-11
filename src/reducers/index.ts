@@ -31,6 +31,31 @@ export default (state: State = { objects: [] }, action: Action) => {
             }
         case 'deselect-all':
             return { ...state, objects: state.objects.map(o => ({ ...o, isSelected: false })) }
+        case 'selected-fill-color':
+            {
+                const fillColor = (action.payload as any);
+                return { ...state, objects: state.objects.map(o => { if (o.isSelected) { return { ...o, fillColor } } else { return o; } }) };
+            }
+        case 'selected-border-color':
+            {
+                const borderColor = (action.payload as any);
+                return { ...state, objects: state.objects.map(o => { if (o.isSelected) { return { ...o, borderColor } } else { return o; } }) };
+            }
+        case 'selected-border-width':
+            {
+                const borderWidth = (action.payload as any);
+                return { ...state, objects: state.objects.map(o => { if (o.isSelected) { return { ...o, borderWidth } } else { return o; } }) };
+            }
+        case 'selected-border-radius-x':
+            {
+                const radiusX = (action.payload as any);
+                return { ...state, objects: state.objects.map(o => { if (o.isSelected) { return { ...o, radiusX } } else { return o; } }) };
+            }
+        case 'selected-border-radius-y':
+            {
+                const radiusY = (action.payload as any);
+                return { ...state, objects: state.objects.map(o => { if (o.isSelected) { return { ...o, radiusY } } else { return o; } }) };
+            }
         default:
             return state;
     }

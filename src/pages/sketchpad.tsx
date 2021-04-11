@@ -1,9 +1,10 @@
 import React from 'react';
 import { connect } from 'react-redux';
 import { ChangeSelection } from 'reducers';
-import { Rectangle, State as RootState, Vector } from 'store';
+import { Color, Rectangle, State as RootState, Vector } from 'store';
 
 import Outliner from '../components/outliner';
+import PropertyBox from '../components/property-box';
 import Tools from '../components/tools';
 
 import './sketchpad.scss';
@@ -16,10 +17,26 @@ interface Actions {
     changeSelect: (data: ChangeSelection) => void;
     select: (index: number) => void;
     deselectAll: () => void;
+    selectedFillColor: (color: Color) => void;
+    selectedBorderColor: (color: Color) => void;
+    selectedBorderWidth: (width: number) => void;
+    selectedBorderRadiusX: (radius: number) => void;
+    selectedBorderRadiusY: (radius: number) => void;
 }
 
 interface RectangleCandidate extends Rectangle {
     mouseDown: Vector;
+}
+
+interface GeneralProperties {
+    fillColor: Color;
+    borderColor: Color;
+    borderWidth: number;
+}
+
+interface RectangleProperties extends GeneralProperties {
+    radiusX: number;
+    radiusY: number;
 }
 
 export type WorkingStates = 'rectangle' | 'select';
@@ -27,6 +44,13 @@ export type WorkingStates = 'rectangle' | 'select';
 function render(props: Props & Actions) {
     const [candidate, changeCandidate] = React.useState<RectangleCandidate | null>(null);
     const [workingState, changeWorkingState] = React.useState<WorkingStates>('rectangle');
+    const [drawProperties, changeDrawProperties] = React.useState<RectangleProperties>({
+        fillColor: { red: 0, green: 0, blue: 0, opacity: 1 },
+        borderColor: { red: 0, green: 0, blue: 0, opacity: 1 },
+        borderWidth: 1,
+        radiusX: 0,
+        radiusY: 0
+    });
     const onMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
         if (candidate !== null) {
             const rect = (e.target as any).getBoundingClientRect();
@@ -56,7 +80,7 @@ function render(props: Props & Actions) {
         const y = e.clientY - rect.y;
         if (workingState === 'rectangle') {
             const name = `rectangle ${props.objects.length}`;
-            changeCandidate({ center: { x, y }, extent: { width: 0, height: 0 }, mouseDown: { x, y }, name, isSelected: true });
+            changeCandidate({ center: { x, y }, extent: { width: 0, height: 0 }, mouseDown: { x, y }, name, isSelected: true, ...drawProperties });
             props.deselectAll();
         }
     };
@@ -82,10 +106,12 @@ function render(props: Props & Actions) {
     }
 
     const rectStyle = (object: Rectangle, index: number) => ({
-        strokeWidth: '1',
-        stroke: 'rgb(0,0,0)',
-        fill: 'rgb(0,0,255)',
+        strokeWidth: object.borderWidth,
+        stroke: `rgba(${object.borderColor.red},${object.borderColor.green},${object.borderColor.blue},${object.borderColor.opacity})`,
+        fill: `rgba(${object.fillColor.red},${object.fillColor.green},${object.fillColor.blue},${object.fillColor.opacity})`,
         pointerEvents: workingState === 'rectangle' ? 'none' : 'auto',
+        rx: object.radiusX,
+        ry: object.radiusY,
         onClick: workingState === 'select' ? (e: React.MouseEvent<any>) => {
             e.stopPropagation();
             if (e.ctrlKey) {
@@ -112,6 +138,27 @@ function render(props: Props & Actions) {
             <circle fill="rgb(127,127,255)" r="6" cx={(data.center.x + data.extent.width).toString()} cy={(data.center.y + data.extent.height).toString()} />
         </g>)
 
+    // TODO: Use material design Simple App Bar
+    let propBox = null;
+    if (workingState === 'select' || props.objects.filter(o => o.isSelected).length > 0) {
+        propBox = <PropertyBox
+            selectedObjects={props.objects.filter(o => o.isSelected)}
+            changeFillColor={props.selectedFillColor}
+            changeBorderColor={props.selectedBorderColor}
+            changeBorderWidth={props.selectedBorderWidth}
+            changeBorderRadiusX={props.selectedBorderRadiusX}
+            changeBorderRadiusY={props.selectedBorderRadiusY}
+        />;
+    } else {
+        propBox = <PropertyBox
+            selectedObjects={[drawProperties as any]}
+            changeFillColor={fillColor => changeDrawProperties({ ...drawProperties, fillColor })}
+            changeBorderColor={borderColor => changeDrawProperties({ ...drawProperties, borderColor })}
+            changeBorderWidth={borderWidth => changeDrawProperties({ ...drawProperties, borderWidth })}
+            changeBorderRadiusX={radiusX => changeDrawProperties({ ...drawProperties, radiusX })}
+            changeBorderRadiusY={radiusY => changeDrawProperties({ ...drawProperties, radiusY })}
+        />;
+    }
     return (
         <div className="sketchpad">
             <header></header >
@@ -123,7 +170,10 @@ function render(props: Props & Actions) {
                     {selections}
                 </svg>
             </section>
-            <Outliner objects={props.objects} select={props.select} changeSelect={props.changeSelect} />
+            <div className="left-menu">
+                {propBox}
+                <Outliner objects={props.objects} select={props.select} changeSelect={props.changeSelect} />
+            </div>
         </div>
     )
 }
@@ -156,7 +206,12 @@ const mapDispatchToProps = (dispatch: any): Actions => ({
     add: (object: Rectangle) => dispatch(add(object)),
     changeSelect: (object: ChangeSelection) => dispatch(changeSelect(object)),
     select: (index: number) => dispatch(select(index)),
-    deselectAll: () => dispatch({ type: 'deselect-all' })
+    deselectAll: () => dispatch({ type: 'deselect-all' }),
+    selectedFillColor: (color: Color) => dispatch({ type: 'selected-fill-color', payload: color }),
+    selectedBorderColor: (color: Color) => dispatch({ type: 'selected-border-color', payload: color }),
+    selectedBorderWidth: (width: number) => dispatch({ type: 'selected-border-width', payload: width }),
+    selectedBorderRadiusX: (radius: number) => dispatch({ type: 'selected-border-radius-x', payload: radius }),
+    selectedBorderRadiusY: (radius: number) => dispatch({ type: 'selected-border-radius-y', payload: radius }),
 })
 
 export default connect(mapStateToProps, mapDispatchToProps)(render);
