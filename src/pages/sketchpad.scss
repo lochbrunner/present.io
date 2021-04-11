@@ -29,8 +29,28 @@ body {
         right: var(--outliner-width);
 
         svg {
+            outline: none;
             width: 100%;
             height: calc(100% - 4px);
+            .tool {
+                &.ne {
+                    cursor: ne-resize;
+                }
+                &.nw {
+                    cursor: nw-resize;
+                }
+                &.ns {
+                    cursor: ns-resize;
+                }
+                &.ew {
+                    cursor: ew-resize;
+                }
+            }
+            .item {
+                &.selected {
+                    cursor: move;
+                }
+            }
         }
     }
 

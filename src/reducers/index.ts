@@ -11,8 +11,9 @@ export interface Action {
     payload: Rectangle | ChangeSelection;
 }
 
+
 export default (state: State = { objects: [] }, action: Action) => {
-    console.log(action)
+    // console.log(action)
     switch (action.type) {
         case 'add':
             return { ...state, objects: [...state.objects, action.payload as any] }
@@ -56,6 +57,21 @@ export default (state: State = { objects: [] }, action: Action) => {
                 const radiusY = (action.payload as any);
                 return { ...state, objects: state.objects.map(o => { if (o.isSelected) { return { ...o, radiusY } } else { return o; } }) };
             }
+        case 'selected-move':
+            {
+                const delta = (action.payload as any);
+                return { ...state, objects: state.objects.map(o => { if (o.isSelected) { return { ...o, center: { x: o.center.x + delta.x, y: o.center.y + delta.y } } } else { return o; } }) };
+            }
+        case 'scale': {
+            const index = (action.payload as any).index;
+            const extent = (action.payload as any).extent;
+            const center = (action.payload as any).center;
+            const object = { ...state.objects[index], center, extent };
+            return { ...state, objects: [...state.objects.slice(0, index), object, ...state.objects.slice(index + 1)] }
+        }
+        case 'selected-delete':
+            return { ...state, objects: state.objects.filter(o => !o.isSelected) };
+
         default:
             return state;
     }
