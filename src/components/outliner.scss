@@ -1,6 +1,15 @@
 .outliner {
     overflow-y: auto;
 
+    .makeStyles-root-7 {
+        max-width: 210px;
+        height: 100%;
+    }
+
+    .makeStyles-labelText-16 {
+        user-select: none;
+    }
+
     .item {
         background-color: #f8f8f8;
         padding: 0 10px;

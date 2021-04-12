@@ -51,6 +51,8 @@
   },
   "dependencies": {
     "@material-ui/core": "^4.11.3",
+    "@material-ui/icons": "^4.11.2",
+    "@material-ui/lab": "^4.0.0-alpha.57",
     "@types/react-redux": "^7.1.16",
     "classnames": "^2.3.1",
     "harmony": "^1.5.1",

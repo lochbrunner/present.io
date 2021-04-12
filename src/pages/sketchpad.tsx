@@ -1,5 +1,11 @@
 import React from 'react';
 import { connect } from 'react-redux';
+import AppBar from '@material-ui/core/AppBar';
+import Toolbar from '@material-ui/core/Toolbar';
+import RedoIcon from '@material-ui/icons/Redo';
+import IconButton from '@material-ui/core/IconButton';
+import UndoIcon from '@material-ui/icons/Undo';
+
 import { ChangeSelection } from 'reducers';
 import { Color, Extent, Rectangle, State as RootState, Vector } from 'store';
 
@@ -8,14 +14,30 @@ import PropertyBox from '../components/property-box';
 import Tools from '../components/tools';
 
 import './sketchpad.scss';
+import { createStyles, makeStyles, Typography } from '@material-ui/core';
+import { Theme } from '@material-ui/core';
+
+const useStyles = makeStyles((theme: Theme) =>
+    createStyles({
+        root: {
+            flexGrow: 1,
+        },
+        menuButton: {
+            marginRight: theme.spacing(2),
+        },
+        title: {
+            flexGrow: 1,
+        },
+    }),
+);
 
 interface Props extends RootState {
 }
 
 interface Actions {
-    add: (object: Rectangle) => void;
+    add: (object: Rectangle[]) => void;
     changeSelect: (data: ChangeSelection) => void;
-    select: (index: number) => void;
+    select: (indices: number[]) => void;
     deselectAll: () => void;
     selectedFillColor: (color: Color) => void;
     selectedBorderColor: (color: Color) => void;
@@ -62,6 +84,7 @@ export type ManipulationState = MoveState | ScaleState | null;
 
 function render(props: Props & Actions) {
     const svgRef = React.useRef<SVGSVGElement>(null);
+    const [clipBoard, setClipboard] = React.useState<Rectangle[] | null>(null);
     const [candidate, changeCandidate] = React.useState<RectangleCandidate | null>(null);
     const [workingState, changeWorkingState] = React.useState<WorkingStates>('rectangle');
     const [manipulationState, changeManipulationState] = React.useState<ManipulationState>(null);
@@ -138,7 +161,7 @@ function render(props: Props & Actions) {
     const onMouseUp = (e: React.MouseEvent<SVGSVGElement>) => {
         if (candidate !== null) {
             if (candidate.extent.height > 10 && candidate.extent.width > 10) {
-                props.add(candidate);
+                props.add([candidate]);
             }
             changeCandidate(null);
         } else {
@@ -157,12 +180,45 @@ function render(props: Props & Actions) {
     };
 
     const onKeyPress = (e: React.KeyboardEvent<SVGSVGElement>) => {
-        if (e.key === 'Delete') {
-            props.selectedDelete();
-        } else if (e.key === 'q' && workingState !== 'select') {
-            changeWorkingState('select');
-        } else if (e.key === 'v' && workingState !== 'rectangle') {
-            changeWorkingState('rectangle');
+        if (e.ctrlKey) {
+            if (e.key === 'c') {
+                const selectedObjects = props.objects.filter(o => o.isSelected);
+                if (selectedObjects.length > 0) {
+                    const copiedObjects = selectedObjects.map(o => ({ ...o, name: `${o.name} (copy)` }));
+                    navigator.clipboard.writeText(JSON.stringify(copiedObjects));
+                }
+                setClipboard(selectedObjects);
+            }
+            else if (e.key === 'x') {
+                const selectedObjects = props.objects.filter(o => o.isSelected);
+                if (selectedObjects.length > 0) {
+                    const copiedObjects = selectedObjects.map(o => ({ ...o, name: `${o.name} (copy)` }));
+                    navigator.clipboard.writeText(JSON.stringify(copiedObjects));
+                    setClipboard(copiedObjects);
+                }
+                props.selectedDelete();
+            }
+            else if (e.key === 'v') {
+                if (clipBoard !== null) {
+                    props.add(clipBoard);
+                }
+            }
+            else if (e.key === 'd') {
+                const selectedObjects = props.objects.filter(o => o.isSelected);
+                if (selectedObjects.length > 0) {
+                    const copiedObjects = selectedObjects.map(o => ({ ...o, name: `${o.name} (copy)`, center: { x: o.center.x + 50, y: o.center.y + 50 } }));
+                    props.add(copiedObjects);
+                    e.stopPropagation();
+                }
+            }
+        } else {
+            if (e.key === 'Delete') {
+                props.selectedDelete();
+            } else if (e.key === 'q' && workingState !== 'select') {
+                changeWorkingState('select');
+            } else if (e.key === 'v' && workingState !== 'rectangle') {
+                changeWorkingState('rectangle');
+            }
         }
     }
     const rectStyle = (object: Rectangle, index: number) => ({
@@ -179,7 +235,7 @@ function render(props: Props & Actions) {
             }
             else if (props.objects.some(o => o.isSelected)) {
                 if (!object.isSelected) {
-                    props.select(index);
+                    props.select([index]);
                 }
                 const rect = (svgRef.current as any).getBoundingClientRect();
                 const x = e.clientX - rect.x;
@@ -192,10 +248,10 @@ function render(props: Props & Actions) {
                 if (manipulationState !== null) {
                     changeManipulationState(null);
                     if (manipulationState.notUpdate) {
-                        props.select(index);
+                        props.select([index]);
                     }
                 } else {
-                    props.select(index);
+                    props.select([index]);
                 }
             } else {
                 if (manipulationState !== null) {
@@ -269,9 +325,32 @@ function render(props: Props & Actions) {
             changeBorderRadiusY={radiusY => changeDrawProperties({ ...drawProperties, radiusY })}
         />;
     }
+    const classes = useStyles();
     return (
-        <div className="sketchpad" >
-            <header></header >
+        <div className={`sketchpad ${classes.root}`} >
+            <AppBar position="static">
+                <Toolbar>
+                    <Typography variant="h6" className={classes.title}>
+                        Present IO
+                    </Typography>
+                    <IconButton
+                        aria-label="redo last action"
+                        aria-controls="menu-appbar"
+                        aria-haspopup="true"
+                        color="inherit"
+                    >
+                        <UndoIcon />
+                    </IconButton>
+                    <IconButton
+                        aria-label="undo last action"
+                        aria-controls="menu-appbar"
+                        aria-haspopup="true"
+                        color="inherit"
+                    >
+                        <RedoIcon />
+                    </IconButton>
+                </Toolbar>
+            </AppBar>
             <Tools workingState={workingState} changeWorkingState={changeWorkingState} />
             <section className="main">
                 <svg ref={svgRef} tabIndex={0} onKeyDown={onKeyPress} onMouseMove={onMouseMove} onMouseDown={onMouseDown} onMouseUp={onMouseUp} onMouseLeave={onMouseLeave}>
@@ -288,7 +367,7 @@ function render(props: Props & Actions) {
     )
 }
 
-export const add = (payload: Rectangle) => {
+export const add = (payload: Rectangle[]) => {
     return {
         type: 'add',
         payload
@@ -296,10 +375,10 @@ export const add = (payload: Rectangle) => {
 
 };
 
-export const select = (index: number) => {
+export const select = (indices: number[]) => {
     return {
         type: 'select',
-        payload: { index },
+        payload: { indices },
     }
 };
 
@@ -313,9 +392,9 @@ export const changeSelect = (payload: ChangeSelection) => {
 const mapStateToProps = (state: RootState): Props => (state);
 
 const mapDispatchToProps = (dispatch: any): Actions => ({
-    add: (object: Rectangle) => dispatch(add(object)),
+    add: (object: Rectangle[]) => dispatch(add(object)),
     changeSelect: (object: ChangeSelection) => dispatch(changeSelect(object)),
-    select: (index: number) => dispatch(select(index)),
+    select: (indices: number[]) => dispatch(select(indices)),
     deselectAll: () => dispatch({ type: 'deselect-all' }),
     selectedFillColor: (color: Color) => dispatch({ type: 'selected-fill-color', payload: color }),
     selectedBorderColor: (color: Color) => dispatch({ type: 'selected-border-color', payload: color }),

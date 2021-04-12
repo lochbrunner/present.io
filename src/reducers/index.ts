@@ -16,12 +16,11 @@ export default (state: State = { objects: [] }, action: Action) => {
     // console.log(action)
     switch (action.type) {
         case 'add':
-            return { ...state, objects: [...state.objects, action.payload as any] }
+            return { ...state, objects: [...state.objects.map(o => ({ ...o, isSelected: false })), ...action.payload as any] }
         case 'select':
             {
-                const index = (action.payload as any).index;
-                const object = state.objects[index];
-                return { ...state, objects: [...state.objects.slice(0, index).map(o => ({ ...o, isSelected: false })), { ...object, isSelected: true }, ...state.objects.slice(index + 1).map(o => ({ ...o, isSelected: false }))] }
+                const indices: number[] = (action.payload as any).indices;
+                return { ...state, objects: state.objects.map((o, i) => ({ ...o, isSelected: indices.indexOf(i) > -1 })) };
             }
         case 'change-select':
             {

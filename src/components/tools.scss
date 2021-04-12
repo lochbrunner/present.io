@@ -4,13 +4,15 @@
     width: calc(var(--tools-width) - 1px);
     height: calc(100% - var(--header-height));
     border-right: solid 1px #eee;
+    padding-top: 20px;
+    margin: 5px 0;
 
-    > div {
-        cursor: pointer;
-        &.active {
-            background-color: #ddf;
-        }
-        &.passive {
-        }
+    .MuiBottomNavigation-root {
+        display: block;
+    }
+
+    .MuiBottomNavigationAction-root {
+        display: inherit;
+        padding: 0;
     }
 }
