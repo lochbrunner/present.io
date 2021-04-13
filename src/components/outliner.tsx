@@ -128,16 +128,25 @@ export interface Props {
     objects: Rectangle[];
     changeSelect: (data: ChangeSelection) => void;
     select: (index: number[]) => void;
+    selectedDelete: () => void;
 }
 
 export default function render(props: Props) {
 
     const classes = useStyles();
 
+    const onKeyPress = (e: React.KeyboardEvent<HTMLDivElement>) => {
+        if (!e.ctrlKey) {
+            if (e.key === 'Delete') {
+                props.selectedDelete();
+            }
+        }
+    }
+
     const objects = props.objects.map((object, i) =>
         <StyledTreeItem key={i} labelText={object.name} nodeId={i.toString()} labelIcon={RectIcon} />)
     return (
-        <div className="outliner">
+        <div onKeyDown={onKeyPress} tabIndex={1} className="outliner">
             <TreeView
                 onNodeSelect={(e, i) => { props.select(i.map(j => parseInt(j))); }}
                 selected={props.objects.map((o, i) => ({ isSelected: o.isSelected, index: i.toString() })).filter(o => o.isSelected).map(o => o.index)}

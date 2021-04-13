@@ -4847,6 +4847,11 @@ redux-harmony@^1.0.1:
   resolved "https://registry.yarnpkg.com/redux-harmony/-/redux-harmony-1.0.1.tgz#afd239d7f68d5b753be8dc4daaeae3fc7a32139f"
   integrity sha512-ksoOJztEmqad1afw1RnVodIHDPk5Scj0QXrqGPaUryOCTDBQvjs7a/pXzmme8da6I332y6PGHr7ALXH8oB7hPw==
 
+redux-undo@^1.0.1:
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/redux-undo/-/redux-undo-1.0.1.tgz#8d989d6c326e6718f4471042e90a5b8b6f3317eb"
+  integrity sha512-0yFPT+FUgwxCEiS0Mg5T1S4tkgjR8h6sJRY9CW4EMsbJOf1SxO289TbJmlzhRouCHacdDF+powPjrjLHoJYxWQ==
+
 redux@*, redux@^4.0.0, redux@^4.0.5:
   version "4.0.5"
   resolved "https://registry.yarnpkg.com/redux/-/redux-4.0.5.tgz#4db5de5816e17891de8a80c424232d06f051d93f"

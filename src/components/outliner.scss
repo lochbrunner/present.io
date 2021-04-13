@@ -1,5 +1,6 @@
 .outliner {
     overflow-y: auto;
+    outline: none;
 
     .makeStyles-root-7 {
         max-width: 210px;
@@ -8,6 +9,10 @@
 
     .makeStyles-labelText-16 {
         user-select: none;
+    }
+
+    .makeStyles-root-10 {
+        max-width: 240px;
     }
 
     .item {

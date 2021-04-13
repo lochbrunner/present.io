@@ -1,37 +1,32 @@
 import React from 'react';
 import { connect } from 'react-redux';
-import AppBar from '@material-ui/core/AppBar';
-import Toolbar from '@material-ui/core/Toolbar';
-import RedoIcon from '@material-ui/icons/Redo';
-import IconButton from '@material-ui/core/IconButton';
-import UndoIcon from '@material-ui/icons/Undo';
-
 import { ChangeSelection } from 'reducers';
 import { Color, Extent, Rectangle, State as RootState, Vector } from 'store';
 
 import Outliner from '../components/outliner';
 import PropertyBox from '../components/property-box';
 import Tools from '../components/tools';
+import Header, { useStyles } from '../components/header';
 
 import './sketchpad.scss';
-import { createStyles, makeStyles, Typography } from '@material-ui/core';
-import { Theme } from '@material-ui/core';
+import { ActionCreators, StateWithHistory } from 'redux-undo';
 
-const useStyles = makeStyles((theme: Theme) =>
-    createStyles({
-        root: {
-            flexGrow: 1,
-        },
-        menuButton: {
-            marginRight: theme.spacing(2),
-        },
-        title: {
-            flexGrow: 1,
-        },
-    }),
-);
+function asDownload(text: string, filename: string) {
+    const a = document.createElement("a");
+    document.body.appendChild(a);
+    a.style.display = "none";
+    const blob = new Blob([text], { type: "image/svg+xml" });
+    const url = window.URL.createObjectURL(blob);
+    a.href = url;
+    a.download = filename;
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+}
 
 interface Props extends RootState {
+    hasFuture: boolean;
+    hasPast: boolean;
 }
 
 interface Actions {
@@ -47,6 +42,8 @@ interface Actions {
     selectedMove: (center: Vector) => void;
     selectedDelete: () => void;
     scale: (index: number, extent: Extent, center: Vector) => void;
+    undo: () => void;
+    redo: () => void;
 }
 
 interface RectangleCandidate extends Rectangle {
@@ -95,6 +92,23 @@ function render(props: Props & Actions) {
         radiusX: 0,
         radiusY: 0
     });
+
+    const download = () => {
+        const { current } = svgRef;
+        if (current !== null) {
+            const image = current.cloneNode(true) as SVGSVGElement;
+            const width = current.width.baseVal.value;
+            const height = current.height.baseVal.value;
+            const markers = image.getElementsByClassName('selection-marker');
+            for (let i = markers.length; i--; i > -1) {
+                markers[i].remove();
+            }
+
+            const code = `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 ${width} ${height}">${image.innerHTML}</svg>`;
+            asDownload(code, 'document.svg');
+        }
+    };
+
     const onMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
         const rect = (svgRef.current as any).getBoundingClientRect();
         const curX = e.clientX - rect.x;
@@ -211,6 +225,12 @@ function render(props: Props & Actions) {
                     e.stopPropagation();
                 }
             }
+            else if (e.key === 'z') {
+                props.undo();
+            }
+            else if (e.key === 'y') {
+                props.redo();
+            }
         } else {
             if (e.key === 'Delete') {
                 props.selectedDelete();
@@ -221,10 +241,11 @@ function render(props: Props & Actions) {
             }
         }
     }
+    const rgbaColor = (color: Color) => `rgba(${color.red},${color.green},${color.blue},${color.opacity})`;
     const rectStyle = (object: Rectangle, index: number) => ({
         strokeWidth: object.borderWidth,
-        stroke: `rgba(${object.borderColor.red},${object.borderColor.green},${object.borderColor.blue},${object.borderColor.opacity})`,
-        fill: `rgba(${object.fillColor.red},${object.fillColor.green},${object.fillColor.blue},${object.fillColor.opacity})`,
+        stroke: rgbaColor(object.borderColor),
+        fill: rgbaColor(object.fillColor),
         pointerEvents: workingState === 'select' ? 'auto' : 'none',
         rx: object.radiusX,
         ry: object.radiusY,
@@ -265,7 +286,7 @@ function render(props: Props & Actions) {
 
     const candidateObject = candidate !== null ?
         <rect pointerEvents={candidate !== null ? 'none' : 'auto'} x={candidate.center.x} y={candidate.center.y} width={candidate.extent.width} height={candidate.extent.height}
-            fill="rgb(208,228,255)" strokeWidth="1" stroke="rgb(0,0,0)" /> : null;
+            fill={rgbaColor(candidate.fillColor)} strokeWidth={candidate.borderWidth} stroke={rgbaColor(candidate.borderColor)} /> : null;
     const objects = props.objects.map((data, i) => <rect key={i} width={data.extent.width} className={`item ${data.isSelected ? 'selected' : ''}`} height={data.extent.height} x={data.center.x} y={data.center.y}
         {...rectStyle(data, i)} />);
 
@@ -293,7 +314,7 @@ function render(props: Props & Actions) {
         'r': 6
     };
     const selections = props.objects.map((object, i) => ({ object, i })).filter(data => data.object.isSelected).map(data =>
-        <g key={data.i}>
+        <g className="selection-marker" key={data.i}>
             <rect onMouseDown={onScaleDown(data.i, 0, -1, data.object.extent, data.object.center)} className="tool ns" fill="rgb(127,127,255)" stroke="rgba(127,127,255,0.01)" strokeWidth="10" height="2" width={data.object.extent.width} x={data.object.center.x} y={data.object.center.y - 1} />
             <rect onMouseDown={onScaleDown(data.i, 0, 1, data.object.extent, data.object.center)} className="tool ns" fill="rgb(127,127,255)" stroke="rgba(127,127,255,0.01)" strokeWidth="10" height="2" width={data.object.extent.width} x={data.object.center.x} y={data.object.extent.height + data.object.center.y - 1} />
             <rect onMouseDown={onScaleDown(data.i, 1, 0, data.object.extent, data.object.center)} className="tool ew" fill="rgb(127,127,255)" stroke="rgba(127,127,255,0.01)" strokeWidth="10" width="2" height={data.object.extent.height} x={data.object.center.x + data.object.extent.width - 1} y={data.object.center.y} />
@@ -328,29 +349,7 @@ function render(props: Props & Actions) {
     const classes = useStyles();
     return (
         <div className={`sketchpad ${classes.root}`} >
-            <AppBar position="static">
-                <Toolbar>
-                    <Typography variant="h6" className={classes.title}>
-                        Present IO
-                    </Typography>
-                    <IconButton
-                        aria-label="redo last action"
-                        aria-controls="menu-appbar"
-                        aria-haspopup="true"
-                        color="inherit"
-                    >
-                        <UndoIcon />
-                    </IconButton>
-                    <IconButton
-                        aria-label="undo last action"
-                        aria-controls="menu-appbar"
-                        aria-haspopup="true"
-                        color="inherit"
-                    >
-                        <RedoIcon />
-                    </IconButton>
-                </Toolbar>
-            </AppBar>
+            <Header download={download} undo={props.undo} redo={props.redo} hasFuture={props.hasFuture} hasPast={props.hasPast} />
             <Tools workingState={workingState} changeWorkingState={changeWorkingState} />
             <section className="main">
                 <svg ref={svgRef} tabIndex={0} onKeyDown={onKeyPress} onMouseMove={onMouseMove} onMouseDown={onMouseDown} onMouseUp={onMouseUp} onMouseLeave={onMouseLeave}>
@@ -361,7 +360,7 @@ function render(props: Props & Actions) {
             </section>
             <div className="left-menu">
                 {propBox}
-                <Outliner objects={props.objects} select={props.select} changeSelect={props.changeSelect} />
+                <Outliner objects={props.objects} selectedDelete={props.selectedDelete} select={props.select} changeSelect={props.changeSelect} />
             </div>
         </div>
     )
@@ -389,7 +388,12 @@ export const changeSelect = (payload: ChangeSelection) => {
     }
 };
 
-const mapStateToProps = (state: RootState): Props => (state);
+const mapStateToProps = (state: StateWithHistory<RootState>): Props => ({
+    ...state.present,
+    hasFuture: state.future.length > 0,
+    hasPast: state.past.length > 0
+});
+
 
 const mapDispatchToProps = (dispatch: any): Actions => ({
     add: (object: Rectangle[]) => dispatch(add(object)),
@@ -404,6 +408,8 @@ const mapDispatchToProps = (dispatch: any): Actions => ({
     selectedMove: (center: Vector) => dispatch({ type: 'selected-move', payload: center }),
     selectedDelete: () => dispatch({ type: 'selected-delete' }),
     scale: (index: number, extent: Extent, center: Vector) => dispatch({ type: 'scale', payload: { index, extent, center } }),
+    undo: () => dispatch(ActionCreators.undo()),
+    redo: () => dispatch(ActionCreators.redo()),
 })
 
 export default connect(mapStateToProps, mapDispatchToProps)(render);

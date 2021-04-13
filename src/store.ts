@@ -1,4 +1,5 @@
 import reducer, { Action } from './reducers';
+import undoable, { StateWithHistory } from 'redux-undo';
 import { createStore } from 'redux'
 
 export interface Vector {
@@ -36,4 +37,6 @@ export interface State {
     objects: Rectangle[];
 }
 
-export default createStore<State, Action, any, any>(reducer, undefined, (window as any).__REDUX_DEVTOOLS_EXTENSION__?.());
+const undoAbleReducer = undoable(reducer);
+
+export default createStore<StateWithHistory<State>, Action, any, any>(undoAbleReducer, undefined, (window as any).__REDUX_DEVTOOLS_EXTENSION__?.());

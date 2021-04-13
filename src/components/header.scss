@@ -1,0 +1,8 @@
+header {
+    position: absolute;
+    width: 100%;
+    &.MuiAppBar-colorPrimary {
+        background-color: #1976d2;
+    }
+    height: var(--header-height);
+}

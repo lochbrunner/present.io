@@ -68,13 +68,13 @@ export default function render(props: Props) {
             <div className="property-box">
                 <div>
                     <FormGroup row>
-                        <FormControlLabel labelPlacement="start" label="fill" control={
+                        <FormControlLabel className="color" labelPlacement="start" label="fill" control={
                             <ColorPicker value={createColor(colorToHex(props.selectedObjects[0].fillColor))} palette={fillColorPalette}
                                 onChange={changeFillColor} />
                         } />
                     </FormGroup>
                     <FormGroup row>
-                        <FormControlLabel labelPlacement="start" label="border" control={
+                        <FormControlLabel className="color" labelPlacement="start" label="border" control={
                             <ColorPicker value={createColor(colorToHex(props.selectedObjects[0].borderColor))} palette={fillColorPalette}
                                 onChange={changeBorderColor} />} />
                     </FormGroup>

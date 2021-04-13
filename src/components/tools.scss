@@ -1,11 +1,11 @@
 .tools {
     position: absolute;
+    box-sizing: border-box;
     top: var(--header-height);
     width: calc(var(--tools-width) - 1px);
     height: calc(100% - var(--header-height));
     border-right: solid 1px #eee;
     padding-top: 20px;
-    margin: 5px 0;
 
     .MuiBottomNavigation-root {
         display: block;

@@ -10,17 +10,8 @@ body {
     right: 0;
 
     --tools-width: 80px;
-    --outliner-width: 220px;
+    --outliner-width: 250px;
     --header-height: 65px;
-
-    header {
-        position: absolute;
-        width: 100%;
-        &.MuiAppBar-colorPrimary {
-            background-color: #1976d2;
-        }
-        height: var(--header-height);
-    }
 
     .main {
         position: absolute;

@@ -1,17 +1,23 @@
 .property-box {
     padding-bottom: 10px;
+    margin-top: 20px;
     min-height: 300px;
-    .makeStyles-root-1 {
-        width: 116px;
+
+    .color {
+        .MuiTextField-root {
+            width: 90px;
+        }
     }
+
+    .MuiTextField-root {
+        width: 130px;
+    }
+
     .MuiFormControlLabel-labelPlacementStart {
         margin-left: 6px;
     }
     .MuiFormControlLabel-label {
-        width: 90px;
-    }
-    .MuiTextField-root {
-        width: 116px;
+        width: 100px;
     }
     .MuiInputBase-input {
         text-align: right;
