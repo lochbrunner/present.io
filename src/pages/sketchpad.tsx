@@ -34,6 +34,7 @@ interface Actions {
     changeSelect: (data: ChangeSelection) => void;
     select: (indices: number[]) => void;
     deselectAll: () => void;
+    selectedSetProperty: (name: string, value: any) => void;
     selectedFillColor: (color: Color) => void;
     selectedBorderColor: (color: Color) => void;
     selectedBorderWidth: (width: number) => void;
@@ -330,20 +331,16 @@ function render(props: Props & Actions) {
     if (workingState === 'select' || props.objects.filter(o => o.isSelected).length > 0) {
         propBox = <PropertyBox
             selectedObjects={props.objects.filter(o => o.isSelected)}
+            setProperty={props.selectedSetProperty}
             changeFillColor={props.selectedFillColor}
             changeBorderColor={props.selectedBorderColor}
-            changeBorderWidth={props.selectedBorderWidth}
-            changeBorderRadiusX={props.selectedBorderRadiusX}
-            changeBorderRadiusY={props.selectedBorderRadiusY}
         />;
     } else {
         propBox = <PropertyBox
             selectedObjects={[drawProperties as any]}
+            setProperty={props.selectedSetProperty}
             changeFillColor={fillColor => changeDrawProperties({ ...drawProperties, fillColor })}
             changeBorderColor={borderColor => changeDrawProperties({ ...drawProperties, borderColor })}
-            changeBorderWidth={borderWidth => changeDrawProperties({ ...drawProperties, borderWidth })}
-            changeBorderRadiusX={radiusX => changeDrawProperties({ ...drawProperties, radiusX })}
-            changeBorderRadiusY={radiusY => changeDrawProperties({ ...drawProperties, radiusY })}
         />;
     }
     const classes = useStyles();
@@ -400,6 +397,7 @@ const mapDispatchToProps = (dispatch: any): Actions => ({
     changeSelect: (object: ChangeSelection) => dispatch(changeSelect(object)),
     select: (indices: number[]) => dispatch(select(indices)),
     deselectAll: () => dispatch({ type: 'deselect-all' }),
+    selectedSetProperty: (name: string, value: any) => dispatch({ type: 'selected-set-property', payload: { name, value } }),
     selectedFillColor: (color: Color) => dispatch({ type: 'selected-fill-color', payload: color }),
     selectedBorderColor: (color: Color) => dispatch({ type: 'selected-border-color', payload: color }),
     selectedBorderWidth: (width: number) => dispatch({ type: 'selected-border-width', payload: width }),

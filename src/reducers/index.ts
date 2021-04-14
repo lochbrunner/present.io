@@ -13,7 +13,6 @@ export interface Action {
 
 
 export default (state: State = { objects: [] }, action: Action) => {
-    // console.log(action)
     switch (action.type) {
         case 'add':
             return { ...state, objects: [...state.objects.map(o => ({ ...o, isSelected: false })), ...action.payload as any] }
@@ -31,6 +30,11 @@ export default (state: State = { objects: [] }, action: Action) => {
             }
         case 'deselect-all':
             return { ...state, objects: state.objects.map(o => ({ ...o, isSelected: false })) }
+        case 'selected-set-property':
+            {
+                const { name, value } = (action.payload as any);
+                return { ...state, objects: state.objects.map(o => { if (o.isSelected) { return { ...o, [name]: value } } else { return o; } }) };
+            }
         case 'selected-fill-color':
             {
                 const fillColor = (action.payload as any);
@@ -40,21 +44,6 @@ export default (state: State = { objects: [] }, action: Action) => {
             {
                 const borderColor = (action.payload as any);
                 return { ...state, objects: state.objects.map(o => { if (o.isSelected) { return { ...o, borderColor } } else { return o; } }) };
-            }
-        case 'selected-border-width':
-            {
-                const borderWidth = (action.payload as any);
-                return { ...state, objects: state.objects.map(o => { if (o.isSelected) { return { ...o, borderWidth } } else { return o; } }) };
-            }
-        case 'selected-border-radius-x':
-            {
-                const radiusX = (action.payload as any);
-                return { ...state, objects: state.objects.map(o => { if (o.isSelected) { return { ...o, radiusX } } else { return o; } }) };
-            }
-        case 'selected-border-radius-y':
-            {
-                const radiusY = (action.payload as any);
-                return { ...state, objects: state.objects.map(o => { if (o.isSelected) { return { ...o, radiusY } } else { return o; } }) };
             }
         case 'selected-move':
             {
