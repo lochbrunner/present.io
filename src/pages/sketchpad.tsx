@@ -45,6 +45,7 @@ interface Actions {
     scale: (index: number, extent: Extent, center: Vector) => void;
     undo: () => void;
     redo: () => void;
+    move: (props: { from: number, to: number }) => void;
 }
 
 interface RectangleCandidate extends Rectangle {
@@ -357,7 +358,7 @@ function render(props: Props & Actions) {
             </section>
             <div className="left-menu">
                 {propBox}
-                <Outliner objects={props.objects} selectedDelete={props.selectedDelete} select={props.select} changeSelect={props.changeSelect} />
+                <Outliner objects={props.objects} selectedDelete={props.selectedDelete} move={props.move} select={props.select} changeSelect={props.changeSelect} />
             </div>
         </div>
     )
@@ -408,6 +409,7 @@ const mapDispatchToProps = (dispatch: any): Actions => ({
     scale: (index: number, extent: Extent, center: Vector) => dispatch({ type: 'scale', payload: { index, extent, center } }),
     undo: () => dispatch(ActionCreators.undo()),
     redo: () => dispatch(ActionCreators.redo()),
+    move: (payload: { from: number, to: number }) => dispatch({ type: 'move', payload }),
 })
 
 export default connect(mapStateToProps, mapDispatchToProps)(render);

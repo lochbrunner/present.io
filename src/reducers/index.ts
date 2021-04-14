@@ -1,5 +1,6 @@
 
 import { Rectangle, State } from '../store';
+import arrayMove from 'array-move';
 
 export interface ChangeSelection {
     state: boolean;
@@ -49,6 +50,11 @@ export default (state: State = { objects: [] }, action: Action) => {
             {
                 const delta = (action.payload as any);
                 return { ...state, objects: state.objects.map(o => { if (o.isSelected) { return { ...o, center: { x: o.center.x + delta.x, y: o.center.y + delta.y } } } else { return o; } }) };
+            }
+        case 'move':
+            {
+                const { from, to } = (action.payload as any);
+                return { ...state, objects: arrayMove(state.objects, from, to) };
             }
         case 'scale': {
             const index = (action.payload as any).index;

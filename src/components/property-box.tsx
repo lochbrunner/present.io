@@ -40,9 +40,9 @@ function colorToHex(color: Color): string {
     return `#${hex(color.red)}${hex(color.green)}${hex(color.blue)}${hex(color.opacity * 255)}`;
 }
 
-function ColorRow(props: { key: number, label: string, valueName: string, colorPallette: ComponentColor[], change: (color: ComponentColor) => void, object: any }) {
+function ColorRow(props: { label: string, valueName: string, colorPallette: ComponentColor[], change: (color: ComponentColor) => void, object: any }) {
     return (
-        <FormGroup key={props.key} row>
+        <FormGroup row>
             <FormControlLabel className="color" labelPlacement="start" label={props.label} control={
                 <ColorPicker value={createColor(colorToHex(props.object[props.valueName]))} palette={props.colorPallette}
                     onChange={props.change} />
@@ -51,9 +51,9 @@ function ColorRow(props: { key: number, label: string, valueName: string, colorP
     );
 }
 
-function NumberRow(props: { key: number | string, label: string, valueName: string, object: any, change: (name: string, value: any) => void }) {
+function NumberRow(props: { label: string, valueName: string, object: any, change: (name: string, value: any) => void }) {
     return (
-        <FormGroup key={props.key} row>
+        <FormGroup row>
             <FormControlLabel labelPlacement="start" label={props.label} control={
                 <TextField value={props.object[props.valueName]}
                     onChange={e => props.change(props.valueName, parseInt(e.target.value))}
@@ -63,9 +63,9 @@ function NumberRow(props: { key: number | string, label: string, valueName: stri
     );
 }
 
-function StringRow(props: { key: number, label: string, valueName: string, object: any, change: (name: string, value: any) => void }) {
+function StringRow(props: { label: string, valueName: string, object: any, change: (name: string, value: any) => void }) {
     return (
-        <FormGroup key={props.key} row>
+        <FormGroup row>
             <FormControlLabel labelPlacement="start" label={props.label} control={
                 <TextField value={props.object[props.valueName]}
                     onChange={e => props.change(props.valueName, e.target.value)}

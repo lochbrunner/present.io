@@ -7,7 +7,8 @@
         height: 100%;
     }
 
-    .makeStyles-labelText-16 {
+    .makeStyles-labelText-16,
+    .MuiTypography-body2 {
         user-select: none;
     }
 
@@ -25,5 +26,11 @@
 
         cursor: pointer;
         user-select: none;
+    }
+
+    .hover {
+        background-color: #666;
+        width: 100%;
+        height: 3px;
     }
 }

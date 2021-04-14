@@ -129,9 +129,12 @@ export interface Props {
     changeSelect: (data: ChangeSelection) => void;
     select: (index: number[]) => void;
     selectedDelete: () => void;
+    move: (props: { from: number, to: number }) => void;
 }
 
 export default function render(props: Props) {
+    const [dragDrop, changeDragDrop] = React.useState<number | null>(null);
+    const [hover, changeHover] = React.useState<number | null>(null);
 
     const classes = useStyles();
 
@@ -143,10 +146,39 @@ export default function render(props: Props) {
         }
     }
 
+    const onMouseDown = (index: number) => (e: React.MouseEvent<any>) => {
+        if (!e.ctrlKey && dragDrop === null) {
+            changeDragDrop(index);
+        }
+    };
+
+    const onMouseUp = (index: number) => (e: React.MouseEvent<any>) => {
+        if (!e.ctrlKey && dragDrop !== null) {
+            props.move({ from: dragDrop, to: index });
+            changeHover(null);
+            changeDragDrop(null);
+        }
+    };
+
+    const onMouseMove = (index: number) => (e: React.MouseEvent<any>) => {
+        if (!e.ctrlKey && dragDrop !== null) {
+            changeHover(index);
+        }
+    };
+
+    const onMouseLeave = (e: any) => {
+        changeHover(null);
+        changeDragDrop(null);
+    };
+
     const objects = props.objects.map((object, i) =>
-        <StyledTreeItem key={i} labelText={object.name} nodeId={i.toString()} labelIcon={RectIcon} />)
+        <StyledTreeItem onMouseMove={onMouseMove(i)} onMouseDown={onMouseDown(i)} onMouseUp={onMouseUp(i)} key={i} labelText={object.name} nodeId={i.toString()} labelIcon={RectIcon} />)
+
+    if (hover !== null) {
+        objects.splice(hover, 0, <div key="hover" className="hover"></div>);
+    }
     return (
-        <div onKeyDown={onKeyPress} tabIndex={1} className="outliner">
+        <div onMouseLeave={onMouseLeave} onKeyDown={onKeyPress} tabIndex={1} className="outliner">
             <TreeView
                 onNodeSelect={(e, i) => { props.select(i.map(j => parseInt(j))); }}
                 selected={props.objects.map((o, i) => ({ isSelected: o.isSelected, index: i.toString() })).filter(o => o.isSelected).map(o => o.index)}
