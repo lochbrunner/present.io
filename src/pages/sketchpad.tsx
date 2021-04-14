@@ -41,6 +41,7 @@ interface Actions {
     selectedBorderRadiusX: (radius: number) => void;
     selectedBorderRadiusY: (radius: number) => void;
     selectedMove: (center: Vector) => void;
+    selectedRotate: (angle: number) => void;
     selectedDelete: () => void;
     scale: (index: number, extent: Extent, center: Vector) => void;
     undo: () => void;
@@ -64,22 +65,109 @@ interface RectangleProperties extends GeneralProperties {
 }
 
 export type WorkingStates = 'rectangle' | 'select';
-export interface MoveState {
+
+interface MoveState {
     type: 'move';
     lastMouseDown: Vector;
-    notUpdate: boolean;
 }
-export interface ScaleState {
+interface ScaleState {
     type: 'scale';
     firstMouseDown: Vector;
     origExtent: Extent;
     origCenter: Vector;
-    notUpdate: boolean;
     dirX: 1 | -1 | 0;
     dirY: 1 | -1 | 0;
     index: number;
 }
-export type ManipulationState = MoveState | ScaleState | null;
+
+interface RotateState {
+    type: 'rotate';
+    firstMouseDown: Vector;
+    rotationCenter: Vector;
+    origRotation: number;
+    index: number;
+}
+
+type ManipulationState = (MoveState | ScaleState | RotateState) & {
+    notUpdate: boolean;
+} | null;
+
+function createTransform(object: Rectangle) {
+    const { extent, center, rotation } = object;
+    const rotationCenter = { x: center.x + 0.5 * extent.width, y: center.y + 0.5 * extent.height };
+    return `rotate(${rotation} ${rotationCenter.x} ${rotationCenter.y})`;
+}
+
+function ManipulationTool(props: { objects: Rectangle[], svgRef: SVGSVGElement | null, changeManipulationState: (prop: ManipulationState) => void }) {
+    const onScaleDown = (index: number, dirX: ScaleState['dirX'], dirY: ScaleState['dirY'], extent: Extent, center: Vector) => (e: React.MouseEvent<any>) => {
+        e.stopPropagation();
+        const rect = (props.svgRef as any).getBoundingClientRect();
+        const x = e.clientX - rect.x;
+        const y = e.clientY - rect.y;
+        props.changeManipulationState({
+            type: 'scale',
+            firstMouseDown: { x, y },
+            origExtent: extent,
+            origCenter: center,
+            notUpdate: true,
+            dirX,
+            dirY,
+            index
+        });
+    }
+
+    const onRotateDown = (index: number, rotationCenter: Vector, origRotation: number) => (e: React.MouseEvent<any>) => {
+        e.stopPropagation();
+        const rect = (props.svgRef as any).getBoundingClientRect();
+        const x = e.clientX - rect.x;
+        const y = e.clientY - rect.y;
+        props.changeManipulationState({
+            type: 'rotate',
+            firstMouseDown: { x, y },
+            notUpdate: true,
+            rotationCenter,
+            index,
+            origRotation
+        });
+    };
+
+    const toolStyle = {
+        fill: 'rgb(220,240,255)',
+        stroke: 'rgb(147,187,255)',
+        strokeWidth: 2,
+        r: 6
+    };
+
+    const resizeLineStyle = {
+        fill: "rgb(127,127,255)",
+        stroke: "rgba(127,127,255,0.01)",
+        strokeWidth: '10'
+    }
+
+    const tools = props.objects.map((object, i) => ({ object, i })).filter(data => data.object.isSelected).map(data => {
+        const { object, i } = data;
+        const { extent, center, rotation } = object;
+        const rotationCenter = { x: center.x + 0.5 * extent.width, y: center.y + 0.5 * extent.height };
+        const pivotRadius = 0.5 * extent.height + 60;
+        const rotationPivot = { x: rotationCenter.x, y: rotationCenter.y - pivotRadius };
+        return (
+            <g transform={createTransform(object)} className="selection-marker" key={i}>
+                <rect onMouseDown={onScaleDown(i, 0, -1, extent, center)} className="tool ns" {...resizeLineStyle} height="2" width={extent.width} x={center.x} y={center.y - 1} />
+                <rect onMouseDown={onScaleDown(i, 0, 1, extent, center)} className="tool ns" {...resizeLineStyle} height="2" width={extent.width} x={center.x} y={extent.height + center.y - 1} />
+                <rect onMouseDown={onScaleDown(i, 1, 0, extent, center)} className="tool ew" {...resizeLineStyle} width="2" height={extent.height} x={center.x + extent.width - 1} y={center.y} />
+                <rect onMouseDown={onScaleDown(i, -1, 0, extent, center)} className="tool ew" {...resizeLineStyle} width="2" height={extent.height} x={center.x - 1} y={center.y} />
+                <circle onMouseDown={onScaleDown(i, -1, -1, extent, center)} className="tool nw" {...toolStyle} cx={center.x} cy={center.y} />
+                <circle onMouseDown={onScaleDown(i, 1, -1, extent, center)} className="tool ne" {...toolStyle} cx={center.x + extent.width} cy={center.y} />
+                <circle onMouseDown={onScaleDown(i, -1, 1, extent, center)} className="tool ne" {...toolStyle} cx={center.x} cy={center.y + extent.height} />
+                <circle onMouseDown={onScaleDown(i, 1, 1, extent, center)} className="tool nw" {...toolStyle} cx={center.x + extent.width} cy={center.y + extent.height} />
+                <line x1={rotationCenter.x} y1={rotationCenter.y} x2={rotationPivot.x} y2={rotationPivot.y} stroke="rgb(127,127,255)" strokeWidth="2" />
+                <circle className="tool" {...toolStyle} fill="rgba(220,240,255, 0.5)" cx={rotationCenter.x} cy={rotationCenter.y} />
+                <circle className="tool rotate" onMouseDown={onRotateDown(i, rotationCenter, rotation)} {...toolStyle} cx={rotationPivot.x} cy={rotationPivot.y} />
+            </g>);
+    })
+
+    return <>{tools}</>
+}
 
 function render(props: Props & Actions) {
     const svgRef = React.useRef<SVGSVGElement>(null);
@@ -161,6 +249,12 @@ function render(props: Props & Actions) {
 
                 changeManipulationState({ ...manipulationState, notUpdate: false });
                 props.scale(index, extent, center);
+            } else if (manipulationState.type === 'rotate') {
+                const { rotationCenter, firstMouseDown, origRotation } = manipulationState;
+                const firstAngle = Math.atan2(firstMouseDown.y - rotationCenter.y, firstMouseDown.x - rotationCenter.x);
+                const currentAngle = Math.atan2(curY - rotationCenter.y, curX - rotationCenter.x);
+
+                props.selectedRotate((currentAngle - firstAngle) * 180 / Math.PI + origRotation);
             }
         }
     };
@@ -170,7 +264,7 @@ function render(props: Props & Actions) {
         const y = e.clientY - rect.y;
         if (workingState === 'rectangle') {
             const name = `rectangle ${props.objects.length}`;
-            changeCandidate({ center: { x, y }, extent: { width: 0, height: 0 }, mouseDown: { x, y }, name, isSelected: true, ...drawProperties });
+            changeCandidate({ center: { x, y }, extent: { width: 0, height: 0 }, rotation: 0, mouseDown: { x, y }, name, isSelected: true, ...drawProperties });
             props.deselectAll();
         }
     };
@@ -289,43 +383,9 @@ function render(props: Props & Actions) {
     const candidateObject = candidate !== null ?
         <rect pointerEvents={candidate !== null ? 'none' : 'auto'} x={candidate.center.x} y={candidate.center.y} width={candidate.extent.width} height={candidate.extent.height}
             fill={rgbaColor(candidate.fillColor)} strokeWidth={candidate.borderWidth} stroke={rgbaColor(candidate.borderColor)} /> : null;
-    const objects = props.objects.map((data, i) => <rect key={i} width={data.extent.width} className={`item ${data.isSelected ? 'selected' : ''}`} height={data.extent.height} x={data.center.x} y={data.center.y}
+    const objects = props.objects.map((data, i) => <rect transform={createTransform(data)} key={i} width={data.extent.width} className={`item ${data.isSelected ? 'selected' : ''}`} height={data.extent.height} x={data.center.x} y={data.center.y}
         {...rectStyle(data, i)} />);
 
-
-    const onScaleDown = (index: number, dirX: ScaleState['dirX'], dirY: ScaleState['dirY'], extent: Extent, center: Vector) => (e: React.MouseEvent<any>) => {
-        e.stopPropagation();
-        const rect = (svgRef.current as any).getBoundingClientRect();
-        const x = e.clientX - rect.x;
-        const y = e.clientY - rect.y;
-        changeManipulationState({
-            type: 'scale',
-            firstMouseDown: { x, y },
-            origExtent: extent,
-            origCenter: center,
-            notUpdate: true,
-            dirX,
-            dirY,
-            index
-        });
-    }
-    const toolStyle = {
-        'fill': 'rgb(220,240,255)',
-        'stroke': 'rgb(147,187,255)',
-        'strokeWidth': 2,
-        'r': 6
-    };
-    const selections = props.objects.map((object, i) => ({ object, i })).filter(data => data.object.isSelected).map(data =>
-        <g className="selection-marker" key={data.i}>
-            <rect onMouseDown={onScaleDown(data.i, 0, -1, data.object.extent, data.object.center)} className="tool ns" fill="rgb(127,127,255)" stroke="rgba(127,127,255,0.01)" strokeWidth="10" height="2" width={data.object.extent.width} x={data.object.center.x} y={data.object.center.y - 1} />
-            <rect onMouseDown={onScaleDown(data.i, 0, 1, data.object.extent, data.object.center)} className="tool ns" fill="rgb(127,127,255)" stroke="rgba(127,127,255,0.01)" strokeWidth="10" height="2" width={data.object.extent.width} x={data.object.center.x} y={data.object.extent.height + data.object.center.y - 1} />
-            <rect onMouseDown={onScaleDown(data.i, 1, 0, data.object.extent, data.object.center)} className="tool ew" fill="rgb(127,127,255)" stroke="rgba(127,127,255,0.01)" strokeWidth="10" width="2" height={data.object.extent.height} x={data.object.center.x + data.object.extent.width - 1} y={data.object.center.y} />
-            <rect onMouseDown={onScaleDown(data.i, -1, 0, data.object.extent, data.object.center)} className="tool ew" fill="rgb(127,127,255)" stroke="rgba(127,127,255,0.01)" strokeWidth="10" width="2" height={data.object.extent.height} x={data.object.center.x - 1} y={data.object.center.y} />
-            <circle onMouseDown={onScaleDown(data.i, -1, -1, data.object.extent, data.object.center)} className="tool nw" {...toolStyle} cx={data.object.center.x.toString()} cy={data.object.center.y.toString()} />
-            <circle onMouseDown={onScaleDown(data.i, 1, -1, data.object.extent, data.object.center)} className="tool ne" {...toolStyle} cx={(data.object.center.x + data.object.extent.width).toString()} cy={data.object.center.y.toString()} />
-            <circle onMouseDown={onScaleDown(data.i, -1, 1, data.object.extent, data.object.center)} className="tool ne" {...toolStyle} cx={data.object.center.x.toString()} cy={(data.object.center.y + data.object.extent.height).toString()} />
-            <circle onMouseDown={onScaleDown(data.i, 1, 1, data.object.extent, data.object.center)} className="tool nw" {...toolStyle} cx={(data.object.center.x + data.object.extent.width).toString()} cy={(data.object.center.y + data.object.extent.height).toString()} />
-        </g>)
 
     // TODO: Use material design Simple App Bar
     let propBox = null;
@@ -353,7 +413,7 @@ function render(props: Props & Actions) {
                 <svg ref={svgRef} tabIndex={0} onKeyDown={onKeyPress} onMouseMove={onMouseMove} onMouseDown={onMouseDown} onMouseUp={onMouseUp} onMouseLeave={onMouseLeave}>
                     {objects}
                     {candidateObject}
-                    {selections}
+                    <ManipulationTool objects={props.objects} svgRef={svgRef.current} changeManipulationState={changeManipulationState} />
                 </svg>
             </section>
             <div className="left-menu">
@@ -405,6 +465,7 @@ const mapDispatchToProps = (dispatch: any): Actions => ({
     selectedBorderRadiusX: (radius: number) => dispatch({ type: 'selected-border-radius-x', payload: radius }),
     selectedBorderRadiusY: (radius: number) => dispatch({ type: 'selected-border-radius-y', payload: radius }),
     selectedMove: (center: Vector) => dispatch({ type: 'selected-move', payload: center }),
+    selectedRotate: (angle: number) => dispatch({ type: 'selected-rotate', payload: angle }),
     selectedDelete: () => dispatch({ type: 'selected-delete' }),
     scale: (index: number, extent: Extent, center: Vector) => dispatch({ type: 'scale', payload: { index, extent, center } }),
     undo: () => dispatch(ActionCreators.undo()),

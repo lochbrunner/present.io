@@ -51,7 +51,7 @@ function ColorRow(props: { label: string, valueName: string, colorPallette: Comp
     );
 }
 
-function NumberRow(props: { label: string, valueName: string, object: any, change: (name: string, value: any) => void }) {
+function NumberRow(props: { label: string, valueName: string, object: any, change: (name: string, value: any) => void, step?: number }) {
     return (
         <FormGroup row>
             <FormControlLabel labelPlacement="start" label={props.label} control={
@@ -130,6 +130,7 @@ export default function render(props: Props) {
                     <NumberRow key={5} object={object} change={props.setProperty} label="ry" valueName="radiusY" />
                     <ExtentRow key={6} object={object} change={props.setProperty} label="size" valueName="extent" />
                     <VectorRow key={7} object={object} change={props.setProperty} label="position" valueName="center" />
+                    <NumberRow key={8} object={object} change={props.setProperty} label="rotation" valueName="rotation" />
                 </div>
             </div>
         );

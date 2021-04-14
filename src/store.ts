@@ -24,6 +24,7 @@ export interface Object {
     fillColor: Color;
     borderColor: Color;
     borderWidth: number;
+    rotation: number;
 }
 
 export interface Rectangle extends Object {

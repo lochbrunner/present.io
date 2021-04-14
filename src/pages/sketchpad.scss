@@ -37,6 +37,10 @@ body {
                 &.ew {
                     cursor: ew-resize;
                 }
+
+                &.rotate {
+                    cursor: move;
+                }
             }
             .item {
                 &.selected {

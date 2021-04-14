@@ -51,6 +51,11 @@ export default (state: State = { objects: [] }, action: Action) => {
                 const delta = (action.payload as any);
                 return { ...state, objects: state.objects.map(o => { if (o.isSelected) { return { ...o, center: { x: o.center.x + delta.x, y: o.center.y + delta.y } } } else { return o; } }) };
             }
+        case 'selected-rotate':
+            {
+                const rotation = (action.payload as any);
+                return { ...state, objects: state.objects.map(o => { if (o.isSelected) { return { ...o, rotation } } else { return o; } }) };
+            }
         case 'move':
             {
                 const { from, to } = (action.payload as any);
