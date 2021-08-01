@@ -1,6 +1,7 @@
 
 import { Rectangle, State } from '../store';
 import arrayMove from 'array-move';
+import { Vector } from 'common/math';
 
 export interface ChangeSelection {
     state: boolean;
@@ -10,6 +11,13 @@ export interface ChangeSelection {
 export interface Action {
     type: string;
     payload: Rectangle | ChangeSelection;
+}
+
+function add(a: Vector, b: Vector): Vector {
+    return {
+        x: a.x + b.x,
+        y: a.y + b.y,
+    }
 }
 
 
@@ -24,7 +32,7 @@ export default (state: State = { objects: [] }, action: Action) => {
             }
         case 'change-select':
             {
-                const index = (action.payload as any).index;
+                const { index } = (action.payload as any);
                 const isSelected = (action.payload as any).state;
                 const object = state.objects[index];
                 return { ...state, objects: [...state.objects.slice(0, index), { ...object, isSelected }, ...state.objects.slice(index + 1)] }
@@ -49,12 +57,22 @@ export default (state: State = { objects: [] }, action: Action) => {
         case 'selected-move':
             {
                 const delta = (action.payload as any);
-                return { ...state, objects: state.objects.map(o => { if (o.isSelected) { return { ...o, center: { x: o.center.x + delta.x, y: o.center.y + delta.y } } } else { return o; } }) };
+                return {
+                    ...state, objects: state.objects
+                        .map(o => { if (o.isSelected) { return { ...o, upperLeft: add(o.upperLeft, delta), origin: add(o.origin, delta) } } else { return o; } })
+                };
             }
         case 'selected-rotate':
             {
                 const rotation = (action.payload as any);
                 return { ...state, objects: state.objects.map(o => { if (o.isSelected) { return { ...o, rotation } } else { return o; } }) };
+            }
+        case 'move-origin':
+            {
+                const { origin, index, deltaUpperLeft } = (action.payload as any);
+                const prevObject = state.objects[index]
+                const object = { ...prevObject, origin: add(origin, prevObject.origin), upperLeft: add(deltaUpperLeft, prevObject.upperLeft) };
+                return { ...state, objects: [...state.objects.slice(0, index), object, ...state.objects.slice(index + 1)] }
             }
         case 'move':
             {
@@ -62,10 +80,8 @@ export default (state: State = { objects: [] }, action: Action) => {
                 return { ...state, objects: arrayMove(state.objects, from, to) };
             }
         case 'scale': {
-            const index = (action.payload as any).index;
-            const extent = (action.payload as any).extent;
-            const center = (action.payload as any).center;
-            const object = { ...state.objects[index], center, extent };
+            const { origin, upperLeft, extent, index } = (action.payload as any);
+            const object = { ...state.objects[index], upperLeft, extent, origin };
             return { ...state, objects: [...state.objects.slice(0, index), object, ...state.objects.slice(index + 1)] }
         }
         case 'selected-delete':

@@ -1,16 +1,7 @@
 import reducer, { Action } from './reducers';
 import undoable, { StateWithHistory } from 'redux-undo';
 import { createStore } from 'redux'
-
-export interface Vector {
-    x: number;
-    y: number;
-}
-
-export interface Extent {
-    width: number;
-    height: number;
-}
+import { Extent, Vector } from 'common/math';
 
 export interface Color {
     red: number;        // [0,255]
@@ -25,10 +16,12 @@ export interface Object {
     borderColor: Color;
     borderWidth: number;
     rotation: number;
+    origin: Vector; // origin of rotation
+    skew: Vector;
 }
 
 export interface Rectangle extends Object {
-    center: Vector;
+    upperLeft: Vector;
     extent: Extent;
     radiusX: number;
     radiusY: number;

@@ -6,7 +6,7 @@ var path = require('path');
 var isProduction = process.argv.indexOf('-p') >= 0;
 var sourcePath = path.join(__dirname, './src');
 var dataPath = path.join(__dirname, './data');
-var outPath = path.join(__dirname, './dist');
+var outPath = path.join(__dirname, './docs');
 
 // plugins
 var HtmlWebpackPlugin = require('html-webpack-plugin');
@@ -19,7 +19,7 @@ module.exports = {
   entry: {app: './index.tsx', vendor: ['react', 'react-dom', 'redux']},
   output: {
     path: outPath,
-    publicPath: isProduction ? '{{resourcePrefix}}/': '/',
+    publicPath: isProduction ? '{{resourcePrefix}}/': './',
     filename: '[name].js',
   },
   // optimization: {

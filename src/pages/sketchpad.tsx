@@ -1,7 +1,7 @@
 import React from 'react';
 import { connect } from 'react-redux';
 import { ChangeSelection } from 'reducers';
-import { Color, Extent, Rectangle, State as RootState, Vector } from 'store';
+import { Color, Rectangle, State as RootState } from 'store';
 
 import Outliner from '../components/outliner';
 import PropertyBox from '../components/property-box';
@@ -10,6 +10,7 @@ import Header, { useStyles } from '../components/header';
 
 import './sketchpad.scss';
 import { ActionCreators, StateWithHistory } from 'redux-undo';
+import { Extent, minusVec, Transformation, Vector } from '../common/math';
 
 function asDownload(text: string, filename: string) {
     const a = document.createElement("a");
@@ -40,10 +41,11 @@ interface Actions {
     selectedBorderWidth: (width: number) => void;
     selectedBorderRadiusX: (radius: number) => void;
     selectedBorderRadiusY: (radius: number) => void;
-    selectedMove: (center: Vector) => void;
+    selectedMove: (upperLeft: Vector) => void;
     selectedRotate: (angle: number) => void;
     selectedDelete: () => void;
-    scale: (index: number, extent: Extent, center: Vector) => void;
+    moveOrigin: (index: number, deltaUpperLeft: Vector, origin: Vector) => void;
+    scale: (index: number, extent: Extent, upperLeft: Vector, origin: Vector) => void;
     undo: () => void;
     redo: () => void;
     move: (props: { from: number, to: number }) => void;
@@ -74,9 +76,12 @@ interface ScaleState {
     type: 'scale';
     firstMouseDown: Vector;
     origExtent: Extent;
-    origCenter: Vector;
+    origUpperLeft: Vector;
+    origOrigin: Vector;
     dirX: 1 | -1 | 0;
     dirY: 1 | -1 | 0;
+    dir: number;
+    rotation: number;
     index: number;
 }
 
@@ -88,18 +93,26 @@ interface RotateState {
     index: number;
 }
 
-type ManipulationState = (MoveState | ScaleState | RotateState) & {
+interface MoveOriginState {
+    type: 'move-origin';
+    origOrigin: Vector;
+    rotation: number;
+    index: number;
+    lastMouseDown: Vector;
+}
+
+type ManipulationState = (MoveState | ScaleState | RotateState | MoveOriginState) & {
     notUpdate: boolean;
 } | null;
 
 function createTransform(object: Rectangle) {
-    const { extent, center, rotation } = object;
-    const rotationCenter = { x: center.x + 0.5 * extent.width, y: center.y + 0.5 * extent.height };
-    return `rotate(${rotation} ${rotationCenter.x} ${rotationCenter.y})`;
+    const { origin, rotation } = object;
+    // const rotationCenter = { x: upperLeft.x + 0.5 * extent.width, y: upperLeft.y + 0.5 * extent.height };
+    return `rotate(${rotation} ${origin.x} ${origin.y})`;
 }
 
 function ManipulationTool(props: { objects: Rectangle[], svgRef: SVGSVGElement | null, changeManipulationState: (prop: ManipulationState) => void }) {
-    const onScaleDown = (index: number, dirX: ScaleState['dirX'], dirY: ScaleState['dirY'], extent: Extent, center: Vector) => (e: React.MouseEvent<any>) => {
+    const onScaleDown = (index: number, dirX: ScaleState['dirX'], dirY: ScaleState['dirY'], extent: Extent, upperLeft: Vector, rotation: number, dir: number, origin: Vector) => (e: React.MouseEvent<any>) => {
         e.stopPropagation();
         const rect = (props.svgRef as any).getBoundingClientRect();
         const x = e.clientX - rect.x;
@@ -108,11 +121,14 @@ function ManipulationTool(props: { objects: Rectangle[], svgRef: SVGSVGElement |
             type: 'scale',
             firstMouseDown: { x, y },
             origExtent: extent,
-            origCenter: center,
+            origUpperLeft: upperLeft,
+            origOrigin: origin,
             notUpdate: true,
             dirX,
             dirY,
-            index
+            dir,
+            index,
+            rotation,
         });
     }
 
@@ -131,6 +147,21 @@ function ManipulationTool(props: { objects: Rectangle[], svgRef: SVGSVGElement |
         });
     };
 
+    const onOriginDown = (index: number, origOrigin: Vector, rotation: number) => (e: React.MouseEvent<any>) => {
+        e.stopPropagation();
+        const rect = (props.svgRef as any).getBoundingClientRect();
+        const x = e.clientX - rect.x;
+        const y = e.clientY - rect.y;
+        props.changeManipulationState({
+            type: 'move-origin',
+            lastMouseDown: { x, y },
+            origOrigin,
+            index,
+            rotation,
+            notUpdate: true,
+        });
+    };
+
     const toolStyle = {
         fill: 'rgb(220,240,255)',
         stroke: 'rgb(147,187,255)',
@@ -146,27 +177,73 @@ function ManipulationTool(props: { objects: Rectangle[], svgRef: SVGSVGElement |
 
     const tools = props.objects.map((object, i) => ({ object, i })).filter(data => data.object.isSelected).map(data => {
         const { object, i } = data;
-        const { extent, center, rotation } = object;
-        const rotationCenter = { x: center.x + 0.5 * extent.width, y: center.y + 0.5 * extent.height };
+        const { extent, upperLeft, rotation, origin } = object;
+        // const rotationCenter = { x: upperLeft.x + 0.5 * extent.width, y: upperLeft.y + 0.5 * extent.height };
         const pivotRadius = 0.5 * extent.height + 60;
-        const rotationPivot = { x: rotationCenter.x, y: rotationCenter.y - pivotRadius };
+        const rotationPivot = { x: origin.x, y: origin.y - pivotRadius };
         return (
             <g transform={createTransform(object)} className="selection-marker" key={i}>
-                <rect onMouseDown={onScaleDown(i, 0, -1, extent, center)} className="tool ns" {...resizeLineStyle} height="2" width={extent.width} x={center.x} y={center.y - 1} />
-                <rect onMouseDown={onScaleDown(i, 0, 1, extent, center)} className="tool ns" {...resizeLineStyle} height="2" width={extent.width} x={center.x} y={extent.height + center.y - 1} />
-                <rect onMouseDown={onScaleDown(i, 1, 0, extent, center)} className="tool ew" {...resizeLineStyle} width="2" height={extent.height} x={center.x + extent.width - 1} y={center.y} />
-                <rect onMouseDown={onScaleDown(i, -1, 0, extent, center)} className="tool ew" {...resizeLineStyle} width="2" height={extent.height} x={center.x - 1} y={center.y} />
-                <circle onMouseDown={onScaleDown(i, -1, -1, extent, center)} className="tool nw" {...toolStyle} cx={center.x} cy={center.y} />
-                <circle onMouseDown={onScaleDown(i, 1, -1, extent, center)} className="tool ne" {...toolStyle} cx={center.x + extent.width} cy={center.y} />
-                <circle onMouseDown={onScaleDown(i, -1, 1, extent, center)} className="tool ne" {...toolStyle} cx={center.x} cy={center.y + extent.height} />
-                <circle onMouseDown={onScaleDown(i, 1, 1, extent, center)} className="tool nw" {...toolStyle} cx={center.x + extent.width} cy={center.y + extent.height} />
-                <line x1={rotationCenter.x} y1={rotationCenter.y} x2={rotationPivot.x} y2={rotationPivot.y} stroke="rgb(127,127,255)" strokeWidth="2" />
-                <circle className="tool" {...toolStyle} fill="rgba(220,240,255, 0.5)" cx={rotationCenter.x} cy={rotationCenter.y} />
-                <circle className="tool rotate" onMouseDown={onRotateDown(i, rotationCenter, rotation)} {...toolStyle} cx={rotationPivot.x} cy={rotationPivot.y} />
+                <rect onMouseDown={onScaleDown(i, 0, -1, extent, upperLeft, rotation, 0, origin)} className="tool ns" {...resizeLineStyle} height="2" width={extent.width} x={upperLeft.x} y={upperLeft.y - 1} />
+                <rect onMouseDown={onScaleDown(i, 0, 1, extent, upperLeft, rotation, 180, origin)} className="tool ns" {...resizeLineStyle} height="2" width={extent.width} x={upperLeft.x} y={extent.height + upperLeft.y - 1} />
+                <rect onMouseDown={onScaleDown(i, 1, 0, extent, upperLeft, rotation, 90, origin)} className="tool ew" {...resizeLineStyle} width="2" height={extent.height} x={upperLeft.x + extent.width - 1} y={upperLeft.y} />
+                <rect onMouseDown={onScaleDown(i, -1, 0, extent, upperLeft, rotation, 270, origin)} className="tool ew" {...resizeLineStyle} width="2" height={extent.height} x={upperLeft.x - 1} y={upperLeft.y} />
+                <circle onMouseDown={onScaleDown(i, -1, -1, extent, upperLeft, rotation, 0, origin)} className="tool nw" {...toolStyle} cx={upperLeft.x} cy={upperLeft.y} />
+                <circle onMouseDown={onScaleDown(i, 1, -1, extent, upperLeft, rotation, 0, origin)} className="tool ne" {...toolStyle} cx={upperLeft.x + extent.width} cy={upperLeft.y} />
+                <circle onMouseDown={onScaleDown(i, -1, 1, extent, upperLeft, rotation, 0, origin)} className="tool ne" {...toolStyle} cx={upperLeft.x} cy={upperLeft.y + extent.height} />
+                <circle onMouseDown={onScaleDown(i, 1, 1, extent, upperLeft, rotation, 0, origin)} className="tool nw" {...toolStyle} cx={upperLeft.x + extent.width} cy={upperLeft.y + extent.height} />
+                <line x1={origin.x} y1={origin.y} x2={rotationPivot.x} y2={rotationPivot.y} stroke="rgb(127,127,255)" strokeWidth="2" />
+                <circle className="tool origin" onMouseDown={onOriginDown(i, origin, rotation)} {...toolStyle} fill="rgba(220,240,255, 0.5)" cx={origin.x} cy={origin.y} />
+                <circle className="tool rotate" onMouseDown={onRotateDown(i, origin, rotation)} {...toolStyle} cx={rotationPivot.x} cy={rotationPivot.y} />
             </g>);
     })
 
     return <>{tools}</>
+}
+
+function fixedOrigin(deltaOrig: Vector, rotation: number): Vector{
+    const transformation = new Transformation({ rotation:-rotation, scale: { width: 1, height: 1 }, translation: { x: 0, y: 0 } });
+    const back = transformation.apply(deltaOrig);
+    return minusVec(deltaOrig, back);
+}
+
+function scale(curX: number, curY: number, manipulationState: ScaleState): { index: number, extent: Extent, upperLeft: Vector, origin: Vector } {
+    const { index, rotation, origExtent, origUpperLeft, origOrigin } = manipulationState;
+    let extent = { ...origExtent };
+    let upperLeft = { ...origUpperLeft };
+    let origin = { ...origOrigin };
+
+    const x = curX - manipulationState.firstMouseDown.x;
+    const y = curY - manipulationState.firstMouseDown.y;
+    const parentStep = { x, y };
+    const transformation = new Transformation({ rotation, scale: { width: 1, height: 1 }, translation: { x: 0, y: 0 } });
+    const childStep = transformation.inverse().apply(parentStep);
+    const { dirX, dirY } = manipulationState;
+    // In Rect Mode.
+    // No transformation yet!
+    extent.width += childStep.x * dirX;
+    extent.height += childStep.y * dirY;
+
+    if (dirX < 0) {
+        upperLeft.x += childStep.x;
+    }
+    if (dirY < 0) {
+        upperLeft.y += childStep.y;
+    }
+    
+    if (extent.width < 0) {
+        extent.width *= -1;
+        upperLeft = { ...upperLeft, x: upperLeft.x - extent.width };
+    }
+    if (extent.height < 0) {
+        extent.height *= -1;
+        upperLeft = { ...upperLeft, y: upperLeft.y - extent.height };
+    }
+    // TODO: 
+    //  * move origin
+    // const deltaUpperLeft = minusVec(upperLeft, origUpperLeft);
+    // const delteExtent = minusExtent(extent, origExtent);
+    // const deltaOrigChild = deltaUpperLeft
+    return { index, extent, upperLeft, origin };
 }
 
 function render(props: Props & Actions) {
@@ -211,14 +288,14 @@ function render(props: Props & Actions) {
             }
             else if (width < 0 && height >= 0) {
                 const x = curX;
-                changeCandidate({ ...candidate, center: { ...candidate.center, x }, extent: { width: -width, height } });
+                changeCandidate({ ...candidate, upperLeft: { ...candidate.upperLeft, x }, extent: { width: -width, height } });
             } else if (width >= 0 && height < 0) {
                 const y = curY;
-                changeCandidate({ ...candidate, center: { ...candidate.center, y }, extent: { width, height: -height } });
+                changeCandidate({ ...candidate, upperLeft: { ...candidate.upperLeft, y }, extent: { width, height: -height } });
             } else {
                 const x = curX;
                 const y = curY;
-                changeCandidate({ ...candidate, center: { x, y }, extent: { width: -width, height: -height } });
+                changeCandidate({ ...candidate, upperLeft: { x, y }, extent: { width: -width, height: -height } });
             }
         }
         else if (manipulationState !== null) {
@@ -228,33 +305,22 @@ function render(props: Props & Actions) {
                 changeManipulationState({ ...manipulationState, notUpdate: false, lastMouseDown: { x: curX, y: curY } })
                 props.selectedMove({ x, y });
             } else if (manipulationState.type === 'scale') {
-                const { index } = manipulationState;
-                const x = curX - manipulationState.firstMouseDown.x;
-                const y = curY - manipulationState.firstMouseDown.y;
-                const mouseExtent = { width: x, height: y };
-                const { dirX, dirY } = manipulationState;
-                const sX = dirX < 0 ? 1 : 0;
-                const sY = dirY < 0 ? 1 : 0;
-                let extent = { width: manipulationState.origExtent.width + mouseExtent.width * dirX, height: manipulationState.origExtent.height + mouseExtent.height * dirY };
-                let center = { x: manipulationState.origCenter.x + sX * x, y: manipulationState.origCenter.y + sY * y };
-
-                if (extent.width < 0) {
-                    extent.width *= -1;
-                    center = { ...center, x: center.x - extent.width };
-                }
-                if (extent.height < 0) {
-                    extent.height *= -1;
-                    center = { ...center, y: center.y - extent.height };
-                }
-
                 changeManipulationState({ ...manipulationState, notUpdate: false });
-                props.scale(index, extent, center);
+                const { index, extent, upperLeft, origin } = scale(curX, curY, manipulationState);
+                props.scale(index, extent, upperLeft, origin);
             } else if (manipulationState.type === 'rotate') {
                 const { rotationCenter, firstMouseDown, origRotation } = manipulationState;
                 const firstAngle = Math.atan2(firstMouseDown.y - rotationCenter.y, firstMouseDown.x - rotationCenter.x);
                 const currentAngle = Math.atan2(curY - rotationCenter.y, curX - rotationCenter.x);
-
                 props.selectedRotate((currentAngle - firstAngle) * 180 / Math.PI + origRotation);
+            } else if (manipulationState.type === 'move-origin') {
+                const { index, lastMouseDown, rotation } = manipulationState;
+                const x = curX - lastMouseDown.x;
+                const y = curY - lastMouseDown.y;
+                const deltaOrig = {x,y};
+                const deltaUpperLeft = fixedOrigin(deltaOrig, rotation);
+                props.moveOrigin(index, deltaUpperLeft, deltaOrig);
+                changeManipulationState({ ...manipulationState, notUpdate: false, lastMouseDown: { x: curX, y: curY } });
             }
         }
     };
@@ -264,13 +330,17 @@ function render(props: Props & Actions) {
         const y = e.clientY - rect.y;
         if (workingState === 'rectangle') {
             const name = `rectangle ${props.objects.length}`;
-            changeCandidate({ center: { x, y }, extent: { width: 0, height: 0 }, rotation: 0, mouseDown: { x, y }, name, isSelected: true, ...drawProperties });
+            changeCandidate({
+                upperLeft: { x, y }, extent: { width: 0, height: 0 }, rotation: 0, skew: { x: 0, y: 0 }, origin: { x, y },
+                mouseDown: { x, y }, name, isSelected: true, ...drawProperties
+            });
             props.deselectAll();
         }
     };
     const onMouseUp = (e: React.MouseEvent<SVGSVGElement>) => {
         if (candidate !== null) {
             if (candidate.extent.height > 10 && candidate.extent.width > 10) {
+                candidate.origin = { x: candidate.upperLeft.x + candidate.extent.width / 2, y: candidate.upperLeft.y + candidate.extent.height / 2 };
                 props.add([candidate]);
             }
             changeCandidate(null);
@@ -316,7 +386,7 @@ function render(props: Props & Actions) {
             else if (e.key === 'd') {
                 const selectedObjects = props.objects.filter(o => o.isSelected);
                 if (selectedObjects.length > 0) {
-                    const copiedObjects = selectedObjects.map(o => ({ ...o, name: `${o.name} (copy)`, center: { x: o.center.x + 50, y: o.center.y + 50 } }));
+                    const copiedObjects = selectedObjects.map(o => ({ ...o, name: `${o.name} (copy)`, upperLeft: { x: o.upperLeft.x + 50, y: o.upperLeft.y + 50 } }));
                     props.add(copiedObjects);
                     e.stopPropagation();
                 }
@@ -381,9 +451,9 @@ function render(props: Props & Actions) {
     });
 
     const candidateObject = candidate !== null ?
-        <rect pointerEvents={candidate !== null ? 'none' : 'auto'} x={candidate.center.x} y={candidate.center.y} width={candidate.extent.width} height={candidate.extent.height}
+        <rect pointerEvents={candidate !== null ? 'none' : 'auto'} x={candidate.upperLeft.x} y={candidate.upperLeft.y} width={candidate.extent.width} height={candidate.extent.height}
             fill={rgbaColor(candidate.fillColor)} strokeWidth={candidate.borderWidth} stroke={rgbaColor(candidate.borderColor)} /> : null;
-    const objects = props.objects.map((data, i) => <rect transform={createTransform(data)} key={i} width={data.extent.width} className={`item ${data.isSelected ? 'selected' : ''}`} height={data.extent.height} x={data.center.x} y={data.center.y}
+    const objects = props.objects.map((data, i) => <rect transform={createTransform(data)} key={i} width={data.extent.width} className={`item ${data.isSelected ? 'selected' : ''}`} height={data.extent.height} x={data.upperLeft.x} y={data.upperLeft.y}
         {...rectStyle(data, i)} />);
 
 
@@ -458,16 +528,17 @@ const mapDispatchToProps = (dispatch: any): Actions => ({
     changeSelect: (object: ChangeSelection) => dispatch(changeSelect(object)),
     select: (indices: number[]) => dispatch(select(indices)),
     deselectAll: () => dispatch({ type: 'deselect-all' }),
+    moveOrigin: (index: number, deltaUpperLeft: Vector, origin: Vector) => dispatch({ type: 'move-origin', payload: { index, deltaUpperLeft, origin } }),
     selectedSetProperty: (name: string, value: any) => dispatch({ type: 'selected-set-property', payload: { name, value } }),
     selectedFillColor: (color: Color) => dispatch({ type: 'selected-fill-color', payload: color }),
     selectedBorderColor: (color: Color) => dispatch({ type: 'selected-border-color', payload: color }),
     selectedBorderWidth: (width: number) => dispatch({ type: 'selected-border-width', payload: width }),
     selectedBorderRadiusX: (radius: number) => dispatch({ type: 'selected-border-radius-x', payload: radius }),
     selectedBorderRadiusY: (radius: number) => dispatch({ type: 'selected-border-radius-y', payload: radius }),
-    selectedMove: (center: Vector) => dispatch({ type: 'selected-move', payload: center }),
+    selectedMove: (upperLeft: Vector) => dispatch({ type: 'selected-move', payload: upperLeft }),
     selectedRotate: (angle: number) => dispatch({ type: 'selected-rotate', payload: angle }),
     selectedDelete: () => dispatch({ type: 'selected-delete' }),
-    scale: (index: number, extent: Extent, center: Vector) => dispatch({ type: 'scale', payload: { index, extent, center } }),
+    scale: (index: number, extent: Extent, upperLeft: Vector, origin: Vector) => dispatch({ type: 'scale', payload: { index, extent, upperLeft, origin } }),
     undo: () => dispatch(ActionCreators.undo()),
     redo: () => dispatch(ActionCreators.redo()),
     move: (payload: { from: number, to: number }) => dispatch({ type: 'move', payload }),
