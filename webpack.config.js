@@ -19,7 +19,7 @@ module.exports = {
   entry: {app: './index.tsx', vendor: ['react', 'react-dom', 'redux']},
   output: {
     path: outPath,
-    publicPath: isProduction ? '{{resourcePrefix}}/': './',
+    publicPath: isProduction ? './': '/',
     filename: '[name].js',
   },
   // optimization: {

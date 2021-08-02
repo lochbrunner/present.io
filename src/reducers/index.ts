@@ -1,5 +1,5 @@
 
-import { Rectangle, State } from '../store';
+import { initState, Rectangle, State } from '../store';
 import arrayMove from 'array-move';
 import { Vector } from 'common/math';
 
@@ -21,7 +21,7 @@ function add(a: Vector, b: Vector): Vector {
 }
 
 
-export default (state: State = { objects: [] }, action: Action) => {
+export default (state: State = initState(), action: Action) => {
     switch (action.type) {
         case 'add':
             return { ...state, objects: [...state.objects.map(o => ({ ...o, isSelected: false })), ...action.payload as any] }
@@ -86,7 +86,10 @@ export default (state: State = { objects: [] }, action: Action) => {
         }
         case 'selected-delete':
             return { ...state, objects: state.objects.filter(o => !o.isSelected) };
-
+        case 'settings': {
+            const settings = (action.payload as any);
+            return { ...state, settings };
+        }
         default:
             return state;
     }

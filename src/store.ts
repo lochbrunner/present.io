@@ -27,8 +27,18 @@ export interface Rectangle extends Object {
     radiusY: number;
 }
 
+
+export interface Settings {
+    background: { paper: boolean; grid: boolean; }
+    resolution: Extent;
+};
 export interface State {
     objects: Rectangle[];
+    settings: Settings;
+}
+
+export function initState(): State {
+    return { objects: [], settings: { background: { paper: true, grid: false }, resolution: { width: 800, height: 600 } } };
 }
 
 const undoAbleReducer = undoable(reducer);

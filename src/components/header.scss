@@ -6,3 +6,16 @@ header {
     }
     height: var(--header-height);
 }
+
+.settings-dialog {
+    label {
+        width: 120px;
+    }
+
+    .value {
+        margin-left: 20px;
+    }
+    .dialog-content {
+        width: 240px;
+    }
+}

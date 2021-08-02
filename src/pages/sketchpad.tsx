@@ -1,7 +1,7 @@
 import React from 'react';
 import { connect } from 'react-redux';
 import { ChangeSelection } from 'reducers';
-import { Color, Rectangle, State as RootState } from 'store';
+import { Color, Rectangle, Settings, State as RootState } from 'store';
 
 import Outliner from '../components/outliner';
 import PropertyBox from '../components/property-box';
@@ -49,6 +49,7 @@ interface Actions {
     undo: () => void;
     redo: () => void;
     move: (props: { from: number, to: number }) => void;
+    updateSettings: (settings: Settings) => void;
 }
 
 interface RectangleCandidate extends Rectangle {
@@ -200,8 +201,8 @@ function ManipulationTool(props: { objects: Rectangle[], svgRef: SVGSVGElement |
     return <>{tools}</>
 }
 
-function fixedOrigin(deltaOrig: Vector, rotation: number): Vector{
-    const transformation = new Transformation({ rotation:-rotation, scale: { width: 1, height: 1 }, translation: { x: 0, y: 0 } });
+function fixedOrigin(deltaOrig: Vector, rotation: number): Vector {
+    const transformation = new Transformation({ rotation: -rotation, scale: { width: 1, height: 1 }, translation: { x: 0, y: 0 } });
     const back = transformation.apply(deltaOrig);
     return minusVec(deltaOrig, back);
 }
@@ -229,7 +230,7 @@ function scale(curX: number, curY: number, manipulationState: ScaleState): { ind
     if (dirY < 0) {
         upperLeft.y += childStep.y;
     }
-    
+
     if (extent.width < 0) {
         extent.width *= -1;
         upperLeft = { ...upperLeft, x: upperLeft.x - extent.width };
@@ -264,8 +265,7 @@ function render(props: Props & Actions) {
         const { current } = svgRef;
         if (current !== null) {
             const image = current.cloneNode(true) as SVGSVGElement;
-            const width = current.width.baseVal.value;
-            const height = current.height.baseVal.value;
+            const { width, height } = props.settings.resolution;
             const markers = image.getElementsByClassName('selection-marker');
             for (let i = markers.length; i--; i > -1) {
                 markers[i].remove();
@@ -317,7 +317,7 @@ function render(props: Props & Actions) {
                 const { index, lastMouseDown, rotation } = manipulationState;
                 const x = curX - lastMouseDown.x;
                 const y = curY - lastMouseDown.y;
-                const deltaOrig = {x,y};
+                const deltaOrig = { x, y };
                 const deltaUpperLeft = fixedOrigin(deltaOrig, rotation);
                 props.moveOrigin(index, deltaUpperLeft, deltaOrig);
                 changeManipulationState({ ...manipulationState, notUpdate: false, lastMouseDown: { x: curX, y: curY } });
@@ -475,9 +475,15 @@ function render(props: Props & Actions) {
         />;
     }
     const classes = useStyles();
+    if (props.settings.background.paper) {
+
+    }
+    if (props.settings.background.grid) {
+
+    }
     return (
         <div className={`sketchpad ${classes.root}`} >
-            <Header download={download} undo={props.undo} redo={props.redo} hasFuture={props.hasFuture} hasPast={props.hasPast} />
+            <Header download={download} undo={props.undo} redo={props.redo} hasFuture={props.hasFuture} hasPast={props.hasPast} settings={props.settings} updateSettings={props.updateSettings} />
             <Tools workingState={workingState} changeWorkingState={changeWorkingState} />
             <section className="main">
                 <svg ref={svgRef} tabIndex={0} onKeyDown={onKeyPress} onMouseMove={onMouseMove} onMouseDown={onMouseDown} onMouseUp={onMouseUp} onMouseLeave={onMouseLeave}>
@@ -542,6 +548,7 @@ const mapDispatchToProps = (dispatch: any): Actions => ({
     undo: () => dispatch(ActionCreators.undo()),
     redo: () => dispatch(ActionCreators.redo()),
     move: (payload: { from: number, to: number }) => dispatch({ type: 'move', payload }),
+    updateSettings: (settings: Settings) => dispatch({ type: 'settings', payload: settings }),
 })
 
 export default connect(mapStateToProps, mapDispatchToProps)(render);
