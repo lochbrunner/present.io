@@ -17,3 +17,13 @@ yarn install
 ```bash
 yarn build
 ```
+
+## Usage
+
+### Move Canvas
+
+Press `Alt` key and drag with the mouse.
+
+### Snap to Grid
+
+Keep the `Ctrl` pressed while editing.

@@ -13,11 +13,16 @@ export interface Action {
     payload: Rectangle | ChangeSelection;
 }
 
-function add(a: Vector, b: Vector): Vector {
-    return {
+function add(a: Vector, b: Vector, snap?: number): Vector {
+    let orig = {
         x: a.x + b.x,
         y: a.y + b.y,
+    };
+    if (snap !== undefined) {
+        orig.x = Math.round(orig.x / snap) * snap;
+        orig.y = Math.round(orig.y / snap) * snap;
     }
+    return orig;
 }
 
 
@@ -56,7 +61,7 @@ export default (state: State = initState(), action: Action) => {
             }
         case 'selected-move':
             {
-                const delta = (action.payload as any);
+                const { delta } = (action.payload as any);
                 return {
                     ...state, objects: state.objects
                         .map(o => { if (o.isSelected) { return { ...o, upperLeft: add(o.upperLeft, delta), origin: add(o.origin, delta) } } else { return o; } })

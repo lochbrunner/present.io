@@ -351,8 +351,14 @@ function render(props: Props & Actions) {
     const getMousePos = (e: React.MouseEvent<any>): Vector => {
         const rect = (svgRef.current as any).getBoundingClientRect();
         const { offset } = props.camera;
-        const x = e.clientX - rect.x + offset.x;
-        const y = e.clientY - rect.y + offset.y;
+        let x = e.clientX - rect.x + offset.x;
+        let y = e.clientY - rect.y + offset.y;
+        if (e.ctrlKey) {
+            // Snap to grid
+            const step = props.settings.background.gridStep;
+            x = Math.round(x / step) * step;
+            y = Math.round(y / step) * step;
+        }
         return { x, y };
     };
 
@@ -641,7 +647,7 @@ const mapDispatchToProps = (dispatch: any): Actions => ({
     selectedBorderWidth: (width: number) => dispatch({ type: 'selected-border-width', payload: width }),
     selectedBorderRadiusX: (radius: number) => dispatch({ type: 'selected-border-radius-x', payload: radius }),
     selectedBorderRadiusY: (radius: number) => dispatch({ type: 'selected-border-radius-y', payload: radius }),
-    selectedMove: (upperLeft: Vector) => dispatch({ type: 'selected-move', payload: upperLeft }),
+    selectedMove: (delta: Vector, snap?: number) => dispatch({ type: 'selected-move', payload: { delta, snap } }),
     selectedRotate: (angle: number) => dispatch({ type: 'selected-rotate', payload: angle }),
     selectedDelete: () => dispatch({ type: 'selected-delete' }),
     scale: (index: number, extent: Extent, upperLeft: Vector, origin: Vector) => dispatch({ type: 'scale', payload: { index, extent, upperLeft, origin } }),
