@@ -1,7 +1,7 @@
 import React from 'react';
 import { connect } from 'react-redux';
 import { ChangeSelection } from 'reducers';
-import { Color, Rectangle, Settings, State as RootState } from 'store';
+import { Camera, Color, Rectangle, Settings, State as RootState } from 'store';
 
 import Outliner from '../components/outliner';
 import PropertyBox from '../components/property-box';
@@ -50,6 +50,7 @@ interface Actions {
     redo: () => void;
     move: (props: { from: number, to: number }) => void;
     updateSettings: (settings: Settings) => void;
+    moveCamera: (deltaOffset: Vector) => void;
 }
 
 interface RectangleCandidate extends Rectangle {
@@ -102,7 +103,12 @@ interface MoveOriginState {
     lastMouseDown: Vector;
 }
 
-type ManipulationState = (MoveState | ScaleState | RotateState | MoveOriginState) & {
+interface MoveCameraState {
+    type: 'move-camera';
+    lastMouseDown: Vector;
+}
+
+type ManipulationState = (MoveState | ScaleState | RotateState | MoveOriginState | MoveCameraState) & {
     notUpdate: boolean;
 } | null;
 
@@ -247,6 +253,17 @@ function scale(curX: number, curY: number, manipulationState: ScaleState): { ind
     return { index, extent, upperLeft, origin };
 }
 
+function createViewBox(camera: Camera, parent: SVGSVGElement | null): string | undefined {
+    if (parent == null) {
+        return undefined;
+    }
+    else {
+        const extent = { width: parent.width.baseVal.value, height: parent.height.baseVal.value };
+        const { x, y } = camera.offset;
+        return `${x} ${y} ${extent.width} ${extent.height}`;
+    }
+}
+
 function render(props: Props & Actions) {
     const svgRef = React.useRef<SVGSVGElement>(null);
     const [clipBoard, setClipboard] = React.useState<Rectangle[] | null>(null);
@@ -280,47 +297,57 @@ function render(props: Props & Actions) {
         const rect = (svgRef.current as any).getBoundingClientRect();
         const curX = e.clientX - rect.x;
         const curY = e.clientY - rect.y;
-        if (candidate !== null) {
-            const width = curX - candidate.mouseDown.x;
-            const height = curY - candidate.mouseDown.y;
-            if (width >= 0 && height >= 0) {
-                changeCandidate({ ...candidate, extent: { width, height } });
+        if (e.altKey) {
+            if (manipulationState !== null && manipulationState.type === 'move-camera') {
+                const { x, y } = manipulationState.lastMouseDown;
+                props.moveCamera({ x: x - curX, y: y - curY })
+                changeManipulationState({ type: 'move-camera', lastMouseDown: { x: curX, y: curY }, notUpdate: false });
             }
-            else if (width < 0 && height >= 0) {
-                const x = curX;
-                changeCandidate({ ...candidate, upperLeft: { ...candidate.upperLeft, x }, extent: { width: -width, height } });
-            } else if (width >= 0 && height < 0) {
-                const y = curY;
-                changeCandidate({ ...candidate, upperLeft: { ...candidate.upperLeft, y }, extent: { width, height: -height } });
-            } else {
-                const x = curX;
-                const y = curY;
-                changeCandidate({ ...candidate, upperLeft: { x, y }, extent: { width: -width, height: -height } });
+        } else {
+
+            if (candidate !== null) {
+                const width = curX - candidate.mouseDown.x;
+                const height = curY - candidate.mouseDown.y;
+                if (width >= 0 && height >= 0) {
+                    changeCandidate({ ...candidate, extent: { width, height } });
+                }
+                else if (width < 0 && height >= 0) {
+                    const x = curX;
+                    changeCandidate({ ...candidate, upperLeft: { ...candidate.upperLeft, x }, extent: { width: -width, height } });
+                } else if (width >= 0 && height < 0) {
+                    const y = curY;
+                    changeCandidate({ ...candidate, upperLeft: { ...candidate.upperLeft, y }, extent: { width, height: -height } });
+                } else {
+                    const x = curX;
+                    const y = curY;
+                    changeCandidate({ ...candidate, upperLeft: { x, y }, extent: { width: -width, height: -height } });
+                }
             }
-        }
-        else if (manipulationState !== null) {
-            if (manipulationState.type === 'move') {
-                const x = curX - manipulationState.lastMouseDown.x;
-                const y = curY - manipulationState.lastMouseDown.y;
-                changeManipulationState({ ...manipulationState, notUpdate: false, lastMouseDown: { x: curX, y: curY } })
-                props.selectedMove({ x, y });
-            } else if (manipulationState.type === 'scale') {
-                changeManipulationState({ ...manipulationState, notUpdate: false });
-                const { index, extent, upperLeft, origin } = scale(curX, curY, manipulationState);
-                props.scale(index, extent, upperLeft, origin);
-            } else if (manipulationState.type === 'rotate') {
-                const { rotationCenter, firstMouseDown, origRotation } = manipulationState;
-                const firstAngle = Math.atan2(firstMouseDown.y - rotationCenter.y, firstMouseDown.x - rotationCenter.x);
-                const currentAngle = Math.atan2(curY - rotationCenter.y, curX - rotationCenter.x);
-                props.selectedRotate((currentAngle - firstAngle) * 180 / Math.PI + origRotation);
-            } else if (manipulationState.type === 'move-origin') {
-                const { index, lastMouseDown, rotation } = manipulationState;
-                const x = curX - lastMouseDown.x;
-                const y = curY - lastMouseDown.y;
-                const deltaOrig = { x, y };
-                const deltaUpperLeft = fixedOrigin(deltaOrig, rotation);
-                props.moveOrigin(index, deltaUpperLeft, deltaOrig);
-                changeManipulationState({ ...manipulationState, notUpdate: false, lastMouseDown: { x: curX, y: curY } });
+            else if (manipulationState !== null) {
+                if (manipulationState.type === 'move') {
+                    const x = curX - manipulationState.lastMouseDown.x;
+                    const y = curY - manipulationState.lastMouseDown.y;
+                    changeManipulationState({ ...manipulationState, notUpdate: false, lastMouseDown: { x: curX, y: curY } })
+                    props.selectedMove({ x, y });
+                } else if (manipulationState.type === 'scale') {
+                    changeManipulationState({ ...manipulationState, notUpdate: false });
+                    const { index, extent, upperLeft, origin } = scale(curX, curY, manipulationState);
+                    props.scale(index, extent, upperLeft, origin);
+                } else if (manipulationState.type === 'rotate') {
+                    const { offset } = props.camera;
+                    const { rotationCenter, firstMouseDown, origRotation } = manipulationState;
+                    const firstAngle = Math.atan2(firstMouseDown.y + offset.y - rotationCenter.y, firstMouseDown.x - rotationCenter.x + offset.x);
+                    const currentAngle = Math.atan2(curY - rotationCenter.y + offset.y, curX - rotationCenter.x + offset.x);
+                    props.selectedRotate((currentAngle - firstAngle) * 180 / Math.PI + origRotation);
+                } else if (manipulationState.type === 'move-origin') {
+                    const { index, lastMouseDown, rotation } = manipulationState;
+                    const x = curX - lastMouseDown.x;
+                    const y = curY - lastMouseDown.y;
+                    const deltaOrig = { x, y };
+                    const deltaUpperLeft = fixedOrigin(deltaOrig, rotation);
+                    props.moveOrigin(index, deltaUpperLeft, deltaOrig);
+                    changeManipulationState({ ...manipulationState, notUpdate: false, lastMouseDown: { x: curX, y: curY } });
+                }
             }
         }
     };
@@ -328,13 +355,19 @@ function render(props: Props & Actions) {
         const rect = (e.target as any).getBoundingClientRect();
         const x = e.clientX - rect.x;
         const y = e.clientY - rect.y;
-        if (workingState === 'rectangle') {
-            const name = `rectangle ${props.objects.length}`;
-            changeCandidate({
-                upperLeft: { x, y }, extent: { width: 0, height: 0 }, rotation: 0, skew: { x: 0, y: 0 }, origin: { x, y },
-                mouseDown: { x, y }, name, isSelected: true, ...drawProperties
-            });
-            props.deselectAll();
+        if (e.altKey) {
+            changeManipulationState({ type: 'move-camera', lastMouseDown: { x, y }, notUpdate: false });
+        }
+        else {
+
+            if (workingState === 'rectangle') {
+                const name = `rectangle ${props.objects.length}`;
+                changeCandidate({
+                    upperLeft: { x, y }, extent: { width: 0, height: 0 }, rotation: 0, skew: { x: 0, y: 0 }, origin: { x, y },
+                    mouseDown: { x, y }, name, isSelected: true, ...drawProperties
+                });
+                props.deselectAll();
+            }
         }
     };
     const onMouseUp = (e: React.MouseEvent<SVGSVGElement>) => {
@@ -481,12 +514,14 @@ function render(props: Props & Actions) {
     if (props.settings.background.grid) {
 
     }
+    const viewBox = createViewBox(props.camera, svgRef.current);
+
     return (
         <div className={`sketchpad ${classes.root}`} >
             <Header download={download} undo={props.undo} redo={props.redo} hasFuture={props.hasFuture} hasPast={props.hasPast} settings={props.settings} updateSettings={props.updateSettings} />
             <Tools workingState={workingState} changeWorkingState={changeWorkingState} />
             <section className="main">
-                <svg ref={svgRef} tabIndex={0} onKeyDown={onKeyPress} onMouseMove={onMouseMove} onMouseDown={onMouseDown} onMouseUp={onMouseUp} onMouseLeave={onMouseLeave}>
+                <svg ref={svgRef} viewBox={viewBox} tabIndex={0} onKeyDown={onKeyPress} onMouseMove={onMouseMove} onMouseDown={onMouseDown} onMouseUp={onMouseUp} onMouseLeave={onMouseLeave}>
                     {objects}
                     {candidateObject}
                     <ManipulationTool objects={props.objects} svgRef={svgRef.current} changeManipulationState={changeManipulationState} />
@@ -549,6 +584,7 @@ const mapDispatchToProps = (dispatch: any): Actions => ({
     redo: () => dispatch(ActionCreators.redo()),
     move: (payload: { from: number, to: number }) => dispatch({ type: 'move', payload }),
     updateSettings: (settings: Settings) => dispatch({ type: 'settings', payload: settings }),
+    moveCamera: (deltaOffset: Vector) => dispatch({ type: 'move-camera', payload: deltaOffset })
 })
 
 export default connect(mapStateToProps, mapDispatchToProps)(render);

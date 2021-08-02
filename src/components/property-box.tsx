@@ -75,25 +75,25 @@ function StringRow(props: { label: string, valueName: string, object: any, chang
     );
 }
 
-function ExtentRow(props: { key: number, label: string, valueName: string, object: any, change: (name: string, value: any) => void }) {
-    const object = props.object[props.valueName];
-    return object && (
-        <>
-            <NumberRow key="width" label="width" valueName="width" object={object} change={(name, width) => props.change(props.valueName, { ...object, width })} />
-            <NumberRow key="height" label="height" valueName="height" object={object} change={(name, height) => props.change(props.valueName, { ...object, height })} />
-        </>
-    ) || '';
-}
+// function ExtentRow(props: { key: number, label: string, valueName: string, object: any, change: (name: string, value: any) => void }) {
+//     const object = props.object[props.valueName];
+//     return object && (
+//         <>
+//             <NumberRow key="width" label="width" valueName="width" object={object} change={(name, width) => props.change(props.valueName, { ...object, width })} />
+//             <NumberRow key="height" label="height" valueName="height" object={object} change={(name, height) => props.change(props.valueName, { ...object, height })} />
+//         </>
+//     ) || '';
+// }
 
-function VectorRow(props: { key: number, label: string, valueName: string, object: any, change: (name: string, value: any) => void }) {
-    const object = props.object[props.valueName];
-    return object && (
-        <>
-            <NumberRow key="x" label="x" valueName="x" object={object} change={(name, x) => props.change(props.valueName, { ...object, x })} />
-            <NumberRow key="y" label="y" valueName="y" object={object} change={(name, y) => props.change(props.valueName, { ...object, y })} />
-        </>
-    ) || '';
-}
+// function VectorRow(props: { key: number, label: string, valueName: string, object: any, change: (name: string, value: any) => void }) {
+//     const object = props.object[props.valueName];
+//     return object && (
+//         <>
+//             <NumberRow key="x" label="x" valueName="x" object={object} change={(name, x) => props.change(props.valueName, { ...object, x })} />
+//             <NumberRow key="y" label="y" valueName="y" object={object} change={(name, y) => props.change(props.valueName, { ...object, y })} />
+//         </>
+//     ) || '';
+// }
 
 export default function render(props: Props) {
     const defaultColors = ['red', 'blue', 'green', 'black', 'yellow', 'orange'];
@@ -128,9 +128,9 @@ export default function render(props: Props) {
                     <NumberRow key={3} object={object} change={props.setProperty} label="border width" valueName="borderWidth" />
                     <NumberRow key={4} object={object} change={props.setProperty} label="rx" valueName="radiusX" />
                     <NumberRow key={5} object={object} change={props.setProperty} label="ry" valueName="radiusY" />
-                    <ExtentRow key={6} object={object} change={props.setProperty} label="size" valueName="extent" />
+                    {/* <ExtentRow key={6} object={object} change={props.setProperty} label="size" valueName="extent" />
                     <VectorRow key={7} object={object} change={props.setProperty} label="position" valueName="center" />
-                    <NumberRow key={8} object={object} change={props.setProperty} label="rotation" valueName="rotation" />
+                    <NumberRow key={8} object={object} change={props.setProperty} label="rotation" valueName="rotation" /> */}
                 </div>
             </div>
         );

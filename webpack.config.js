@@ -3,7 +3,7 @@ var webpack = require('webpack');
 var path = require('path');
 
 // variables
-var isProduction = process.argv.indexOf('-p') >= 0;
+var isProduction = process.env.NODE_ENV === 'production'
 var sourcePath = path.join(__dirname, './src');
 var dataPath = path.join(__dirname, './data');
 var outPath = path.join(__dirname, './docs');

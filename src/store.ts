@@ -32,13 +32,27 @@ export interface Settings {
     background: { paper: boolean; grid: boolean; }
     resolution: Extent;
 };
+
+function initSettings() {
+    return { background: { paper: true, grid: false }, resolution: { width: 800, height: 600 } };
+}
+
+export interface Camera {
+    offset: Vector;
+}
+
+function initCamera() {
+    return { offset: { x: 0, y: 0 } };
+}
+
 export interface State {
     objects: Rectangle[];
     settings: Settings;
+    camera: Camera;
 }
 
 export function initState(): State {
-    return { objects: [], settings: { background: { paper: true, grid: false }, resolution: { width: 800, height: 600 } } };
+    return { objects: [], settings: initSettings(), camera: initCamera() };
 }
 
 const undoAbleReducer = undoable(reducer);

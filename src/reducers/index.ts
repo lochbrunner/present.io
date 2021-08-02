@@ -90,6 +90,10 @@ export default (state: State = initState(), action: Action) => {
             const settings = (action.payload as any);
             return { ...state, settings };
         }
+        case 'move-camera': {
+            const deltaOffset = (action.payload as any);
+            return { ...state, camera: { ...state.camera, offset: add(deltaOffset, state.camera.offset) } };
+        }
         default:
             return state;
     }
