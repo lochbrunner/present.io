@@ -46,11 +46,11 @@ function deepCopySettings(orig: Settings): Settings {
 export function SettingsDialog(props: { settings: Settings, onClose: (settings: Settings) => void, onAbort: () => void, open: boolean }) {
     const { onClose, onAbort, settings, open } = props;
 
-    const handleClose = () => {
-        onClose(settings);
-    };
-
     const [candidate, setCandidate] = React.useState<Settings>(deepCopySettings(settings));
+
+    const handleClose = () => {
+        onClose(candidate);
+    };
 
     const handleAbort = () => {
         setCandidate(deepCopySettings(settings));
@@ -69,6 +69,13 @@ export function SettingsDialog(props: { settings: Settings, onClose: (settings: 
                 <FormGroup row>
                     <FormControlLabel labelPlacement="start" label="Grid" control={
                         <Switch className="value" checked={candidate.background.grid} onChange={(e, checked) => setCandidate({ ...candidate, background: { ...candidate.background, grid: checked } })} name="grid" />
+                    } />
+                </FormGroup>
+                <FormGroup row>
+                    <FormControlLabel labelPlacement="start" label="Grid Step" control={
+                        <TextField value={candidate.background.gridStep} className="value"
+                            onChange={e => setCandidate({ ...candidate, background: { ...candidate.background, gridStep: parseInt(e.target.value) } },)}
+                            type="number" />
                     } />
                 </FormGroup>
                 <FormGroup row>

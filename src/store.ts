@@ -29,12 +29,12 @@ export interface Rectangle extends Object {
 
 
 export interface Settings {
-    background: { paper: boolean; grid: boolean; }
+    background: { paper: boolean; grid: boolean; gridStep: number }
     resolution: Extent;
 };
 
-function initSettings() {
-    return { background: { paper: true, grid: false }, resolution: { width: 800, height: 600 } };
+function initSettings(): Settings {
+    return { background: { paper: true, grid: false, gridStep: 25 }, resolution: { width: 800, height: 600 } };
 }
 
 export interface Camera {
@@ -42,7 +42,7 @@ export interface Camera {
 }
 
 function initCamera() {
-    return { offset: { x: 0, y: 0 } };
+    return { offset: { x: -20, y: -20 } };
 }
 
 export interface State {

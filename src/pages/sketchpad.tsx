@@ -11,6 +11,7 @@ import Header, { useStyles } from '../components/header';
 import './sketchpad.scss';
 import { ActionCreators, StateWithHistory } from 'redux-undo';
 import { Extent, minusVec, Transformation, Vector } from '../common/math';
+import { Paper } from '@material-ui/core';
 
 function asDownload(text: string, filename: string) {
     const a = document.createElement("a");
@@ -118,12 +119,10 @@ function createTransform(object: Rectangle) {
     return `rotate(${rotation} ${origin.x} ${origin.y})`;
 }
 
-function ManipulationTool(props: { objects: Rectangle[], svgRef: SVGSVGElement | null, changeManipulationState: (prop: ManipulationState) => void }) {
+function ManipulationTool(props: { objects: Rectangle[], svgRef: SVGSVGElement | null, changeManipulationState: (prop: ManipulationState) => void, getMousePos: (e: React.MouseEvent<any>) => Vector }) {
     const onScaleDown = (index: number, dirX: ScaleState['dirX'], dirY: ScaleState['dirY'], extent: Extent, upperLeft: Vector, rotation: number, dir: number, origin: Vector) => (e: React.MouseEvent<any>) => {
         e.stopPropagation();
-        const rect = (props.svgRef as any).getBoundingClientRect();
-        const x = e.clientX - rect.x;
-        const y = e.clientY - rect.y;
+        const { x, y } = props.getMousePos(e);
         props.changeManipulationState({
             type: 'scale',
             firstMouseDown: { x, y },
@@ -141,9 +140,7 @@ function ManipulationTool(props: { objects: Rectangle[], svgRef: SVGSVGElement |
 
     const onRotateDown = (index: number, rotationCenter: Vector, origRotation: number) => (e: React.MouseEvent<any>) => {
         e.stopPropagation();
-        const rect = (props.svgRef as any).getBoundingClientRect();
-        const x = e.clientX - rect.x;
-        const y = e.clientY - rect.y;
+        const { x, y } = props.getMousePos(e);
         props.changeManipulationState({
             type: 'rotate',
             firstMouseDown: { x, y },
@@ -156,9 +153,7 @@ function ManipulationTool(props: { objects: Rectangle[], svgRef: SVGSVGElement |
 
     const onOriginDown = (index: number, origOrigin: Vector, rotation: number) => (e: React.MouseEvent<any>) => {
         e.stopPropagation();
-        const rect = (props.svgRef as any).getBoundingClientRect();
-        const x = e.clientX - rect.x;
-        const y = e.clientY - rect.y;
+        const { x, y } = props.getMousePos(e);
         props.changeManipulationState({
             type: 'move-origin',
             lastMouseDown: { x, y },
@@ -264,6 +259,66 @@ function createViewBox(camera: Camera, parent: SVGSVGElement | null): string | u
     }
 }
 
+function createBackground(camera: Camera, settings: Settings) {
+    if (settings.background.paper) {
+        const height = `${settings.resolution.height}px`;
+        const width = `${settings.resolution.width}px`;
+        const top = `${-camera.offset.y}px`;
+        const left = `${-camera.offset.x}px`;
+        return (
+            <Paper className="paper" elevation={3} style={{ height, width, top, left }} />
+        );
+    }
+    return '';
+}
+
+function Grid(props: { camera: Camera, settings: Settings }) {
+    const canvasRef = React.useRef<HTMLCanvasElement>(null);
+    let height = 500;
+    let width = 500;
+    if (canvasRef.current !== null) {
+        width = canvasRef.current.parentElement?.clientWidth ?? 500;
+        height = canvasRef.current.parentElement?.clientHeight ?? 500;
+        const ctx = canvasRef.current.getContext('2d');
+        ctx?.clearRect(0, 0, width, height);
+        const { offset } = props.camera;
+        const { resolution } = props.settings;
+        if (props.settings.background.grid) {
+            if (ctx) {
+                ctx.strokeStyle = "#eeeeee";
+                ctx.lineWidth = 1;
+            }
+            ctx?.beginPath();
+            const step = props.settings.background.gridStep;
+            for (let x = step; x < resolution.width; x += step) {
+                ctx?.moveTo(-offset.x + x, -offset.y);
+                ctx?.lineTo(-offset.x + x, -offset.y + resolution.height);
+            }
+            for (let y = step; y < resolution.height; y += step) {
+                ctx?.moveTo(-offset.x, -offset.y + y);
+                ctx?.lineTo(-offset.x + resolution.width, -offset.y + y);
+            }
+            ctx?.stroke();
+        }
+        if (!props.settings.background.paper) {
+            ctx?.beginPath();
+            if (ctx) {
+                ctx.strokeStyle = "#888888";
+                ctx.lineWidth = 1;
+            }
+            ctx?.moveTo(-offset.x, -offset.y);
+            ctx?.lineTo(-offset.x + resolution.width, -offset.y);
+            ctx?.lineTo(-offset.x + resolution.width, -offset.y + resolution.height);
+            ctx?.lineTo(-offset.x, -offset.y + resolution.height);
+            ctx?.lineTo(-offset.x, -offset.y);
+            ctx?.stroke();
+        }
+    }
+    return (
+        <canvas height={height} width={width} ref={canvasRef} className="grid" />
+    );
+}
+
 function render(props: Props & Actions) {
     const svgRef = React.useRef<SVGSVGElement>(null);
     const [clipBoard, setClipboard] = React.useState<Rectangle[] | null>(null);
@@ -293,11 +348,24 @@ function render(props: Props & Actions) {
         }
     };
 
-    const onMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    const getMousePos = (e: React.MouseEvent<any>): Vector => {
         const rect = (svgRef.current as any).getBoundingClientRect();
-        const curX = e.clientX - rect.x;
-        const curY = e.clientY - rect.y;
+        const { offset } = props.camera;
+        const x = e.clientX - rect.x + offset.x;
+        const y = e.clientY - rect.y + offset.y;
+        return { x, y };
+    };
+
+    const getMouseRawPos = (e: React.MouseEvent<any>): Vector => {
+        const rect = (svgRef.current as any).getBoundingClientRect();
+        const x = e.clientX - rect.x;
+        const y = e.clientY - rect.y;
+        return { x, y };
+    };
+
+    const onMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
         if (e.altKey) {
+            const { x: curX, y: curY } = getMouseRawPos(e);
             if (manipulationState !== null && manipulationState.type === 'move-camera') {
                 const { x, y } = manipulationState.lastMouseDown;
                 props.moveCamera({ x: x - curX, y: y - curY })
@@ -305,6 +373,7 @@ function render(props: Props & Actions) {
             }
         } else {
 
+            const { x: curX, y: curY } = getMousePos(e);
             if (candidate !== null) {
                 const width = curX - candidate.mouseDown.x;
                 const height = curY - candidate.mouseDown.y;
@@ -334,10 +403,9 @@ function render(props: Props & Actions) {
                     const { index, extent, upperLeft, origin } = scale(curX, curY, manipulationState);
                     props.scale(index, extent, upperLeft, origin);
                 } else if (manipulationState.type === 'rotate') {
-                    const { offset } = props.camera;
                     const { rotationCenter, firstMouseDown, origRotation } = manipulationState;
-                    const firstAngle = Math.atan2(firstMouseDown.y + offset.y - rotationCenter.y, firstMouseDown.x - rotationCenter.x + offset.x);
-                    const currentAngle = Math.atan2(curY - rotationCenter.y + offset.y, curX - rotationCenter.x + offset.x);
+                    const firstAngle = Math.atan2(firstMouseDown.y - rotationCenter.y, firstMouseDown.x - rotationCenter.x);
+                    const currentAngle = Math.atan2(curY - rotationCenter.y, curX - rotationCenter.x);
                     props.selectedRotate((currentAngle - firstAngle) * 180 / Math.PI + origRotation);
                 } else if (manipulationState.type === 'move-origin') {
                     const { index, lastMouseDown, rotation } = manipulationState;
@@ -352,14 +420,12 @@ function render(props: Props & Actions) {
         }
     };
     const onMouseDown = (e: React.MouseEvent<SVGSVGElement>) => {
-        const rect = (e.target as any).getBoundingClientRect();
-        const x = e.clientX - rect.x;
-        const y = e.clientY - rect.y;
         if (e.altKey) {
+            const { x, y } = getMouseRawPos(e);
             changeManipulationState({ type: 'move-camera', lastMouseDown: { x, y }, notUpdate: false });
         }
         else {
-
+            const { x, y } = getMousePos(e);
             if (workingState === 'rectangle') {
                 const name = `rectangle ${props.objects.length}`;
                 changeCandidate({
@@ -457,9 +523,7 @@ function render(props: Props & Actions) {
                 if (!object.isSelected) {
                     props.select([index]);
                 }
-                const rect = (svgRef.current as any).getBoundingClientRect();
-                const x = e.clientX - rect.x;
-                const y = e.clientY - rect.y;
+                const { x, y } = getMousePos(e);
                 changeManipulationState({ type: 'move', notUpdate: true, lastMouseDown: { x, y } });
             }
         } : undefined,
@@ -508,23 +572,24 @@ function render(props: Props & Actions) {
         />;
     }
     const classes = useStyles();
-    if (props.settings.background.paper) {
-
-    }
-    if (props.settings.background.grid) {
-
-    }
+    const background = createBackground(props.camera, props.settings);
     const viewBox = createViewBox(props.camera, svgRef.current);
+    const mainStyle: any = {};
+    if (props.settings.background.paper) {
+        mainStyle['backgroundColor'] = '#fcfcfc';
+    }
 
     return (
         <div className={`sketchpad ${classes.root}`} >
             <Header download={download} undo={props.undo} redo={props.redo} hasFuture={props.hasFuture} hasPast={props.hasPast} settings={props.settings} updateSettings={props.updateSettings} />
             <Tools workingState={workingState} changeWorkingState={changeWorkingState} />
-            <section className="main">
+            <section className="main" style={mainStyle}>
+                {background}
+                <Grid camera={props.camera} settings={props.settings} />
                 <svg ref={svgRef} viewBox={viewBox} tabIndex={0} onKeyDown={onKeyPress} onMouseMove={onMouseMove} onMouseDown={onMouseDown} onMouseUp={onMouseUp} onMouseLeave={onMouseLeave}>
                     {objects}
                     {candidateObject}
-                    <ManipulationTool objects={props.objects} svgRef={svgRef.current} changeManipulationState={changeManipulationState} />
+                    <ManipulationTool objects={props.objects} svgRef={svgRef.current} changeManipulationState={changeManipulationState} getMousePos={getMousePos} />
                 </svg>
             </section>
             <div className="left-menu">

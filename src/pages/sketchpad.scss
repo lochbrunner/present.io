@@ -19,8 +19,10 @@ body {
         height: calc(100% - var(--header-height));
         left: var(--tools-width);
         right: var(--outliner-width);
+        overflow: hidden;
 
         svg {
+            position: absolute;
             outline: none;
             width: 100%;
             height: calc(100% - 4px);
@@ -47,6 +49,11 @@ body {
                     cursor: move;
                 }
             }
+        }
+
+        .paper,
+        .grid {
+            position: absolute;
         }
     }
 

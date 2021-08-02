@@ -17,5 +17,9 @@ header {
     }
     .dialog-content {
         width: 240px;
+
+        span.MuiTypography-body1 {
+            width: 220px;
+        }
     }
 }
