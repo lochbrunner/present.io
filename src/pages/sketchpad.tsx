@@ -1,7 +1,7 @@
 import React from 'react';
 import { connect } from 'react-redux';
 import { ChangeSelection } from 'reducers';
-import { Camera, Color, Rectangle, Settings, State as RootState } from 'store';
+import { Camera, Color, AnyObject, Rectangle, Settings, State as RootState, Ellipse } from 'store';
 
 import Outliner from '../components/outliner';
 import PropertyBox from '../components/property-box';
@@ -10,7 +10,7 @@ import Header, { useStyles } from '../components/header';
 
 import './sketchpad.scss';
 import { ActionCreators, StateWithHistory } from 'redux-undo';
-import { Extent, minusVec, Transformation, Vector } from '../common/math';
+import { addVec, Extent, minusVec, Transformation, Vector } from '../common/math';
 import { Paper } from '@material-ui/core';
 
 function asDownload(text: string, filename: string) {
@@ -32,7 +32,7 @@ interface Props extends RootState {
 }
 
 interface Actions {
-    add: (object: Rectangle[]) => void;
+    add: (object: AnyObject[]) => void;
     changeSelect: (data: ChangeSelection) => void;
     select: (indices: number[]) => void;
     deselectAll: () => void;
@@ -54,9 +54,11 @@ interface Actions {
     moveCamera: (deltaOffset: Vector) => void;
 }
 
-interface RectangleCandidate extends Rectangle {
-    mouseDown: Vector;
-}
+// interface Candidate extends CommonObject {
+//     mouseDown: Vector;
+// }
+
+type Candidate = AnyObject & { mouseDown: Vector }
 
 interface GeneralProperties {
     fillColor: Color;
@@ -69,7 +71,7 @@ interface RectangleProperties extends GeneralProperties {
     radiusY: number;
 }
 
-export type WorkingStates = 'rectangle' | 'select';
+export type WorkingStates = 'rectangle' | 'select' | 'ellipse';
 
 interface MoveState {
     type: 'move';
@@ -113,13 +115,13 @@ type ManipulationState = (MoveState | ScaleState | RotateState | MoveOriginState
     notUpdate: boolean;
 } | null;
 
-function createTransform(object: Rectangle) {
+function createTransform(object: AnyObject) {
     const { origin, rotation } = object;
     // const rotationCenter = { x: upperLeft.x + 0.5 * extent.width, y: upperLeft.y + 0.5 * extent.height };
     return `rotate(${rotation} ${origin.x} ${origin.y})`;
 }
 
-function ManipulationTool(props: { objects: Rectangle[], svgRef: SVGSVGElement | null, changeManipulationState: (prop: ManipulationState) => void, getMousePos: (e: React.MouseEvent<any>) => Vector }) {
+function ManipulationTool(props: { objects: AnyObject[], svgRef: SVGSVGElement | null, changeManipulationState: (prop: ManipulationState) => void, getMousePos: (e: React.MouseEvent<any>) => Vector }) {
     const onScaleDown = (index: number, dirX: ScaleState['dirX'], dirY: ScaleState['dirY'], extent: Extent, upperLeft: Vector, rotation: number, dir: number, origin: Vector) => (e: React.MouseEvent<any>) => {
         e.stopPropagation();
         const { x, y } = props.getMousePos(e);
@@ -179,24 +181,46 @@ function ManipulationTool(props: { objects: Rectangle[], svgRef: SVGSVGElement |
 
     const tools = props.objects.map((object, i) => ({ object, i })).filter(data => data.object.isSelected).map(data => {
         const { object, i } = data;
-        const { extent, upperLeft, rotation, origin } = object;
-        // const rotationCenter = { x: upperLeft.x + 0.5 * extent.width, y: upperLeft.y + 0.5 * extent.height };
-        const pivotRadius = 0.5 * extent.height + 60;
-        const rotationPivot = { x: origin.x, y: origin.y - pivotRadius };
-        return (
-            <g transform={createTransform(object)} className="selection-marker" key={i}>
-                <rect onMouseDown={onScaleDown(i, 0, -1, extent, upperLeft, rotation, 0, origin)} className="tool ns" {...resizeLineStyle} height="2" width={extent.width} x={upperLeft.x} y={upperLeft.y - 1} />
-                <rect onMouseDown={onScaleDown(i, 0, 1, extent, upperLeft, rotation, 180, origin)} className="tool ns" {...resizeLineStyle} height="2" width={extent.width} x={upperLeft.x} y={extent.height + upperLeft.y - 1} />
-                <rect onMouseDown={onScaleDown(i, 1, 0, extent, upperLeft, rotation, 90, origin)} className="tool ew" {...resizeLineStyle} width="2" height={extent.height} x={upperLeft.x + extent.width - 1} y={upperLeft.y} />
-                <rect onMouseDown={onScaleDown(i, -1, 0, extent, upperLeft, rotation, 270, origin)} className="tool ew" {...resizeLineStyle} width="2" height={extent.height} x={upperLeft.x - 1} y={upperLeft.y} />
-                <circle onMouseDown={onScaleDown(i, -1, -1, extent, upperLeft, rotation, 0, origin)} className="tool nw" {...toolStyle} cx={upperLeft.x} cy={upperLeft.y} />
-                <circle onMouseDown={onScaleDown(i, 1, -1, extent, upperLeft, rotation, 0, origin)} className="tool ne" {...toolStyle} cx={upperLeft.x + extent.width} cy={upperLeft.y} />
-                <circle onMouseDown={onScaleDown(i, -1, 1, extent, upperLeft, rotation, 0, origin)} className="tool ne" {...toolStyle} cx={upperLeft.x} cy={upperLeft.y + extent.height} />
-                <circle onMouseDown={onScaleDown(i, 1, 1, extent, upperLeft, rotation, 0, origin)} className="tool nw" {...toolStyle} cx={upperLeft.x + extent.width} cy={upperLeft.y + extent.height} />
-                <line x1={origin.x} y1={origin.y} x2={rotationPivot.x} y2={rotationPivot.y} stroke="rgb(127,127,255)" strokeWidth="2" />
-                <circle className="tool origin" onMouseDown={onOriginDown(i, origin, rotation)} {...toolStyle} fill="rgba(220,240,255, 0.5)" cx={origin.x} cy={origin.y} />
-                <circle className="tool rotate" onMouseDown={onRotateDown(i, origin, rotation)} {...toolStyle} cx={rotationPivot.x} cy={rotationPivot.y} />
-            </g>);
+        const createItems = (extent: Extent, origin: Vector, upperLeft: Vector, rotation: number, rotationPivot: Vector) => {
+            return (
+                <>
+                    <rect onMouseDown={onScaleDown(i, 0, -1, extent, upperLeft, rotation, 0, origin)} className="tool ns" {...resizeLineStyle} height="2" width={extent.width} x={upperLeft.x} y={upperLeft.y - 1} />
+                    <rect onMouseDown={onScaleDown(i, 0, 1, extent, upperLeft, rotation, 180, origin)} className="tool ns" {...resizeLineStyle} height="2" width={extent.width} x={upperLeft.x} y={extent.height + upperLeft.y - 1} />
+                    <rect onMouseDown={onScaleDown(i, 1, 0, extent, upperLeft, rotation, 90, origin)} className="tool ew" {...resizeLineStyle} width="2" height={extent.height} x={upperLeft.x + extent.width - 1} y={upperLeft.y} />
+                    <rect onMouseDown={onScaleDown(i, -1, 0, extent, upperLeft, rotation, 270, origin)} className="tool ew" {...resizeLineStyle} width="2" height={extent.height} x={upperLeft.x - 1} y={upperLeft.y} />
+                    <circle onMouseDown={onScaleDown(i, -1, -1, extent, upperLeft, rotation, 0, origin)} className="tool nw" {...toolStyle} cx={upperLeft.x} cy={upperLeft.y} />
+                    <circle onMouseDown={onScaleDown(i, 1, -1, extent, upperLeft, rotation, 0, origin)} className="tool ne" {...toolStyle} cx={upperLeft.x + extent.width} cy={upperLeft.y} />
+                    <circle onMouseDown={onScaleDown(i, -1, 1, extent, upperLeft, rotation, 0, origin)} className="tool ne" {...toolStyle} cx={upperLeft.x} cy={upperLeft.y + extent.height} />
+                    <circle onMouseDown={onScaleDown(i, 1, 1, extent, upperLeft, rotation, 0, origin)} className="tool nw" {...toolStyle} cx={upperLeft.x + extent.width} cy={upperLeft.y + extent.height} />
+                    <line x1={origin.x} y1={origin.y} x2={rotationPivot.x} y2={rotationPivot.y} stroke="rgb(127,127,255)" strokeWidth="2" />
+                    <circle className="tool origin" onMouseDown={onOriginDown(i, origin, rotation)} {...toolStyle} fill="rgba(220,240,255, 0.5)" cx={origin.x} cy={origin.y} />
+                    <circle className="tool rotate" onMouseDown={onRotateDown(i, origin, rotation)} {...toolStyle} cx={rotationPivot.x} cy={rotationPivot.y} />
+                </>
+            );
+        }
+
+        if (object.type === 'rect') {
+            const { extent, upperLeft, rotation, origin } = object;
+            const pivotRadius = 0.5 * extent.height + 60;
+            const rotationPivot = { x: origin.x, y: origin.y - pivotRadius };
+            return (
+                <g transform={createTransform(object)} className="selection-marker" key={i}>
+                    {createItems(extent, origin, upperLeft, rotation, rotationPivot)}
+                </g>);
+        } else if (object.type === 'ellipse') {
+            const { radius, rotation, origin, center } = object;
+            const pivotRadius = 0.5 * radius.y + 60;
+            const rotationPivot = { x: origin.x, y: origin.y - pivotRadius };
+            const upperLeft = minusVec(center, radius);
+            const extent = { width: radius.x * 2, height: radius.y * 2 };
+            return (
+                <g transform={createTransform(object)} className="selection-marker" key={i}>
+                    {createItems(extent, origin, upperLeft, rotation, rotationPivot)}
+                </g>
+            );
+        } else {
+            return null;
+        }
     })
 
     return <>{tools}</>
@@ -319,10 +343,34 @@ function Grid(props: { camera: Camera, settings: Settings }) {
     );
 }
 
+const rgbaColor = (color: Color) => `rgba(${color.red},${color.green},${color.blue},${color.opacity})`;
+
+function CandidateElement(props: { candidate: Candidate | null }) {
+    const { candidate } = props;
+    if (candidate === null) {
+        return null;
+    }
+    else if (candidate.type === 'rect') {
+        return (
+            <rect pointerEvents={candidate !== null ? 'none' : 'auto'} x={candidate.upperLeft.x} y={candidate.upperLeft.y} width={candidate.extent.width} height={candidate.extent.height}
+                fill={rgbaColor(candidate.fillColor)} strokeWidth={candidate.borderWidth} stroke={rgbaColor(candidate.borderColor)} />
+        );
+    }
+    else if (candidate.type === 'ellipse') {
+        const { center, radius } = candidate;
+        return (
+            <ellipse cx={center.x} cy={center.y} rx={radius.x} ry={radius.y} fill={rgbaColor(candidate.fillColor)} strokeWidth={candidate.borderWidth} stroke={rgbaColor(candidate.borderColor)} />
+        );
+    }
+    else {
+        return null;
+    }
+}
+
 function render(props: Props & Actions) {
     const svgRef = React.useRef<SVGSVGElement>(null);
-    const [clipBoard, setClipboard] = React.useState<Rectangle[] | null>(null);
-    const [candidate, changeCandidate] = React.useState<RectangleCandidate | null>(null);
+    const [clipBoard, setClipboard] = React.useState<AnyObject[] | null>(null);
+    const [candidate, changeCandidate] = React.useState<Candidate | null>(null);
     const [workingState, changeWorkingState] = React.useState<WorkingStates>('rectangle');
     const [manipulationState, changeManipulationState] = React.useState<ManipulationState>(null);
     const [drawProperties, changeDrawProperties] = React.useState<RectangleProperties>({
@@ -383,19 +431,28 @@ function render(props: Props & Actions) {
             if (candidate !== null) {
                 const width = curX - candidate.mouseDown.x;
                 const height = curY - candidate.mouseDown.y;
-                if (width >= 0 && height >= 0) {
-                    changeCandidate({ ...candidate, extent: { width, height } });
+                if (candidate.type === 'rect') {
+                    if (width >= 0 && height >= 0) {
+                        changeCandidate({ ...candidate, extent: { width, height } });
+                    }
+                    else if (width < 0 && height >= 0) {
+                        const x = curX;
+                        changeCandidate({ ...candidate, upperLeft: { ...candidate.upperLeft, x }, extent: { width: -width, height } });
+                    } else if (width >= 0 && height < 0) {
+                        const y = curY;
+                        changeCandidate({ ...candidate, upperLeft: { ...candidate.upperLeft, y }, extent: { width, height: -height } });
+                    } else {
+                        const x = curX;
+                        const y = curY;
+                        changeCandidate({ ...candidate, upperLeft: { x, y }, extent: { width: -width, height: -height } });
+                    }
                 }
-                else if (width < 0 && height >= 0) {
-                    const x = curX;
-                    changeCandidate({ ...candidate, upperLeft: { ...candidate.upperLeft, x }, extent: { width: -width, height } });
-                } else if (width >= 0 && height < 0) {
-                    const y = curY;
-                    changeCandidate({ ...candidate, upperLeft: { ...candidate.upperLeft, y }, extent: { width, height: -height } });
-                } else {
-                    const x = curX;
-                    const y = curY;
-                    changeCandidate({ ...candidate, upperLeft: { x, y }, extent: { width: -width, height: -height } });
+                else if (candidate.type === 'ellipse') {
+                    let radius = { x: width / 2, y: height / 2 };
+                    const center = addVec(candidate.mouseDown, radius);
+                    radius.x = Math.abs(radius.x);
+                    radius.y = Math.abs(radius.y);
+                    changeCandidate({ ...candidate, radius, center });
                 }
             }
             else if (manipulationState !== null) {
@@ -435,7 +492,15 @@ function render(props: Props & Actions) {
             if (workingState === 'rectangle') {
                 const name = `rectangle ${props.objects.length}`;
                 changeCandidate({
-                    upperLeft: { x, y }, extent: { width: 0, height: 0 }, rotation: 0, skew: { x: 0, y: 0 }, origin: { x, y },
+                    upperLeft: { x, y }, extent: { width: 0, height: 0 }, rotation: 0, skew: { x: 0, y: 0 }, origin: { x, y }, type: 'rect',
+                    mouseDown: { x, y }, name, isSelected: true, ...drawProperties
+                });
+                props.deselectAll();
+            }
+            else if (workingState === 'ellipse') {
+                const name = `ellipse ${props.objects.length}`;
+                changeCandidate({
+                    center: { x, y }, radius: { x: 0, y: 0 }, pathLength: 0, rotation: 0, skew: { x: 0, y: 0 }, origin: { x, y }, type: 'ellipse',
                     mouseDown: { x, y }, name, isSelected: true, ...drawProperties
                 });
                 props.deselectAll();
@@ -444,9 +509,16 @@ function render(props: Props & Actions) {
     };
     const onMouseUp = (e: React.MouseEvent<SVGSVGElement>) => {
         if (candidate !== null) {
-            if (candidate.extent.height > 10 && candidate.extent.width > 10) {
-                candidate.origin = { x: candidate.upperLeft.x + candidate.extent.width / 2, y: candidate.upperLeft.y + candidate.extent.height / 2 };
-                props.add([candidate]);
+            if (candidate.type === 'rect') {
+                if (candidate.extent.height > 10 && candidate.extent.width > 10) {
+                    candidate.origin = { x: candidate.upperLeft.x + candidate.extent.width / 2, y: candidate.upperLeft.y + candidate.extent.height / 2 };
+                    props.add([candidate]);
+                }
+            } else if (candidate.type === 'ellipse') {
+                if (candidate.radius.x > 10 && candidate.radius.y > 10) {
+                    candidate.origin = { ...candidate.center };
+                    props.add([candidate]);
+                }
             }
             changeCandidate(null);
         } else {
@@ -491,7 +563,19 @@ function render(props: Props & Actions) {
             else if (e.key === 'd') {
                 const selectedObjects = props.objects.filter(o => o.isSelected);
                 if (selectedObjects.length > 0) {
-                    const copiedObjects = selectedObjects.map(o => ({ ...o, name: `${o.name} (copy)`, upperLeft: { x: o.upperLeft.x + 50, y: o.upperLeft.y + 50 } }));
+                    const margin = { x: 50, y: 50 };
+                    const copyObject = (o: AnyObject): AnyObject => {
+                        if (o.type === 'rect') {
+                            return { ...o, name: `${o.name} (copy)`, upperLeft: addVec(o.upperLeft, margin) }
+                        }
+                        else if (o.type === 'ellipse') {
+                            return { ...o, name: `${o.name} (copy)`, center: addVec(o.center, margin) };
+                        }
+                        else {
+                            return { ...(o as any), name: `${(o as any).name} (copy)`, };
+                        }
+                    };
+                    const copiedObjects = selectedObjects.map(copyObject);
                     props.add(copiedObjects);
                     e.stopPropagation();
                 }
@@ -509,17 +593,19 @@ function render(props: Props & Actions) {
                 changeWorkingState('select');
             } else if (e.key === 'v' && workingState !== 'rectangle') {
                 changeWorkingState('rectangle');
+            } else if (e.key === 'e' && workingState !== 'ellipse') {
+                changeWorkingState('ellipse');
             }
         }
-    }
-    const rgbaColor = (color: Color) => `rgba(${color.red},${color.green},${color.blue},${color.opacity})`;
-    const rectStyle = (object: Rectangle, index: number) => ({
+    };
+
+    const commonStyle = (object: AnyObject, index: number) => ({
         strokeWidth: object.borderWidth,
         stroke: rgbaColor(object.borderColor),
         fill: rgbaColor(object.fillColor),
         pointerEvents: workingState === 'select' ? 'auto' : 'none',
-        rx: object.radiusX,
-        ry: object.radiusY,
+        transform: createTransform(object),
+        className: `item ${object.isSelected ? 'selected' : ''}`,
         onMouseDown: manipulationState === null && workingState === 'select' ? (e: React.MouseEvent<any>) => {
             e.stopPropagation();
             if (e.ctrlKey) {
@@ -553,11 +639,33 @@ function render(props: Props & Actions) {
         } : undefined,
     });
 
-    const candidateObject = candidate !== null ?
-        <rect pointerEvents={candidate !== null ? 'none' : 'auto'} x={candidate.upperLeft.x} y={candidate.upperLeft.y} width={candidate.extent.width} height={candidate.extent.height}
-            fill={rgbaColor(candidate.fillColor)} strokeWidth={candidate.borderWidth} stroke={rgbaColor(candidate.borderColor)} /> : null;
-    const objects = props.objects.map((data, i) => <rect transform={createTransform(data)} key={i} width={data.extent.width} className={`item ${data.isSelected ? 'selected' : ''}`} height={data.extent.height} x={data.upperLeft.x} y={data.upperLeft.y}
-        {...rectStyle(data, i)} />);
+    const rectStyle = (object: Rectangle, index: number) => ({
+        ...commonStyle(object, index),
+        rx: object.radiusX,
+        ry: object.radiusY,
+
+    });
+
+    const ellipseStyle = (object: Ellipse, index: number) => ({
+        ...commonStyle(object, index),
+    });
+
+    const candidateObject = <CandidateElement candidate={candidate} />;
+    const objects = props.objects.map((data, i) => {
+        if (data.type === 'rect') {
+            return (
+                <rect key={i} width={data.extent.width} height={data.extent.height} x={data.upperLeft.x} y={data.upperLeft.y}
+                    {...rectStyle(data, i)} />
+            );
+        } else if (data.type === 'ellipse') {
+            return (
+                <ellipse key={i} rx={data.radius.x} ry={data.radius.y} cx={data.center.x} cy={data.center.y} pathLength={data.pathLength}
+                    {...ellipseStyle(data, i)} />
+            );
+        } else {
+            return undefined;
+        }
+    });
 
 
     // TODO: Use material design Simple App Bar
@@ -606,7 +714,7 @@ function render(props: Props & Actions) {
     )
 }
 
-export const add = (payload: Rectangle[]) => {
+export const add = (payload: AnyObject[]) => {
     return {
         type: 'add',
         payload
@@ -636,7 +744,7 @@ const mapStateToProps = (state: StateWithHistory<RootState>): Props => ({
 
 
 const mapDispatchToProps = (dispatch: any): Actions => ({
-    add: (object: Rectangle[]) => dispatch(add(object)),
+    add: (object: AnyObject[]) => dispatch(add(object)),
     changeSelect: (object: ChangeSelection) => dispatch(changeSelect(object)),
     select: (indices: number[]) => dispatch(select(indices)),
     deselectAll: () => dispatch({ type: 'deselect-all' }),

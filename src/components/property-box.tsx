@@ -1,5 +1,5 @@
 import React from 'react';
-import { Color, Rectangle } from 'store';
+import { AnyObject, Color } from 'store';
 import { ColorPicker, createColor, Color as ComponentColor } from 'material-ui-color';
 import TextField from '@material-ui/core/TextField';
 import FormGroup from '@material-ui/core/FormGroup';
@@ -8,7 +8,7 @@ import FormControlLabel from '@material-ui/core/FormControlLabel';
 import './property-box.scss';
 
 export interface Props {
-    selectedObjects: Rectangle[];
+    selectedObjects: AnyObject[];
     setProperty: (name: string, value: any) => void;
     changeFillColor: (color: Color) => void;
     changeBorderColor: (color: Color) => void;
@@ -119,15 +119,38 @@ export default function render(props: Props) {
         }
         const object = props.selectedObjects[0];
 
+        const Properties = () => {
+            if (object.type === 'rect') {
+                return (
+                    <>
+                        <StringRow key={0} object={object} change={props.setProperty} label="name" valueName="name" />
+                        <ColorRow key={1} object={object} label="fill" valueName="fillColor" colorPallette={fillColorPalette} change={changeFillColor} />
+                        <ColorRow key={2} object={object} label="border" valueName="borderColor" colorPallette={fillColorPalette} change={changeBorderColor} />
+                        <NumberRow key={3} object={object} change={props.setProperty} label="border width" valueName="borderWidth" />
+                        <NumberRow key={4} object={object} change={props.setProperty} label="rx" valueName="radiusX" />
+                        <NumberRow key={5} object={object} change={props.setProperty} label="ry" valueName="radiusY" />
+                    </>
+                );
+            } else if (object.type === 'ellipse') {
+                return (
+                    <>
+                        <StringRow key={0} object={object} change={props.setProperty} label="name" valueName="name" />
+                        <ColorRow key={1} object={object} label="fill" valueName="fillColor" colorPallette={fillColorPalette} change={changeFillColor} />
+                        <ColorRow key={2} object={object} label="border" valueName="borderColor" colorPallette={fillColorPalette} change={changeBorderColor} />
+                        <NumberRow key={3} object={object} change={props.setProperty} label="border width" valueName="borderWidth" />
+                        <NumberRow key={4} object={object} change={props.setProperty} label="path length" valueName="pathLength" />
+                    </>
+                );
+            }
+            else {
+                return <></>;
+            }
+        }
+
         return (
             <div className="property-box">
                 <div>
-                    <StringRow key={0} object={object} change={props.setProperty} label="name" valueName="name" />
-                    <ColorRow key={1} object={object} label="fill" valueName="fillColor" colorPallette={fillColorPalette} change={changeFillColor} />
-                    <ColorRow key={2} object={object} label="border" valueName="borderColor" colorPallette={fillColorPalette} change={changeBorderColor} />
-                    <NumberRow key={3} object={object} change={props.setProperty} label="border width" valueName="borderWidth" />
-                    <NumberRow key={4} object={object} change={props.setProperty} label="rx" valueName="radiusX" />
-                    <NumberRow key={5} object={object} change={props.setProperty} label="ry" valueName="radiusY" />
+                    <Properties />
                     {/* <ExtentRow key={6} object={object} change={props.setProperty} label="size" valueName="extent" />
                     <VectorRow key={7} object={object} change={props.setProperty} label="position" valueName="center" />
                     <NumberRow key={8} object={object} change={props.setProperty} label="rotation" valueName="rotation" /> */}

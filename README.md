@@ -4,7 +4,7 @@
 
 An online SVG editor with animation support for the purpose of presentations.
 
-Try the live [demo](https://lochbrunner.github.io/present.io/index.html)!
+Try the live demo on [lochbrunner.github.io/present.io](https://lochbrunner.github.io/present.io)
 
 ## Setup
 

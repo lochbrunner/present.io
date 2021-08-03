@@ -7,7 +7,7 @@ import './tools.scss';
 import BottomNavigation from '@material-ui/core/BottomNavigation';
 import BottomNavigationAction from '@material-ui/core/BottomNavigationAction';
 import EditIcon from '@material-ui/icons/Edit';
-import { RectIcon } from './icons';
+import { EllipseIcon, RectIcon } from './icons';
 
 export interface Props {
     workingState: WorkingStates;
@@ -15,7 +15,7 @@ export interface Props {
 }
 
 export default function render(props: Props) {
-    const state2index = { 'select': 0, 'rectangle': 1 };
+    const state2index = { 'select': 0, 'rectangle': 1, 'ellipse': 2 };
     const index2state = _.invert(state2index);
     return (
         <div className="tools">
@@ -29,6 +29,7 @@ export default function render(props: Props) {
             >
                 <BottomNavigationAction label="Edit" icon={<EditIcon />} />
                 <BottomNavigationAction label="Rectangles" icon={<RectIcon />} />
+                <BottomNavigationAction label="Ellipse" icon={<EllipseIcon />} />
             </BottomNavigation>
         </div>
     );

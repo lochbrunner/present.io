@@ -7,7 +7,7 @@ import ArrowRightIcon from '@material-ui/icons/ArrowRight';
 import ArrowDropDownIcon from '@material-ui/icons/ArrowDropDown';
 
 import { ChangeSelection } from 'reducers';
-import { Rectangle } from 'store';
+import { AnyObject } from 'store';
 
 import './outliner.scss';
 import { RectIcon } from './icons';
@@ -125,7 +125,7 @@ const useStyles = makeStyles(
 );
 
 export interface Props {
-    objects: Rectangle[];
+    objects: AnyObject[];
     changeSelect: (data: ChangeSelection) => void;
     select: (index: number[]) => void;
     selectedDelete: () => void;

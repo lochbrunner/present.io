@@ -9,7 +9,7 @@ export interface Color {
     blue: number;       // [0,255]
     opacity: number;    // [0,1]
 }
-export interface Object {
+export interface BaseObject {
     name: string;
     isSelected: boolean;
     fillColor: Color;
@@ -20,12 +20,22 @@ export interface Object {
     skew: Vector;
 }
 
-export interface Rectangle extends Object {
+export interface Rectangle extends BaseObject {
+    type: 'rect';
     upperLeft: Vector;
     extent: Extent;
     radiusX: number;
     radiusY: number;
 }
+
+export interface Ellipse extends BaseObject {
+    type: 'ellipse';
+    center: Vector;
+    radius: Vector;
+    pathLength: number;
+}
+
+export type AnyObject = Rectangle | Ellipse;
 
 
 export interface Settings {
@@ -46,7 +56,7 @@ function initCamera() {
 }
 
 export interface State {
-    objects: Rectangle[];
+    objects: AnyObject[];
     settings: Settings;
     camera: Camera;
 }

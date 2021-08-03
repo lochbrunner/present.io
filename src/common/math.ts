@@ -20,11 +20,19 @@ export interface TransformationData {
     matrix: number[][];
 }
 
-export function minusVec(a: Vector, b: Vector):Vector {
+export function minusVec(a: Vector, b: Vector): Vector {
     return { x: a.x - b.x, y: a.y - b.y };
 }
 
-export function minusExtent(a: Extent, b: Extent):Extent {
+export function addVec(a: Vector, b: Vector): Vector {
+    return { x: a.x + b.x, y: a.y + b.y };
+}
+
+export function scaleVec(a: Vector, b: number): Vector {
+    return { x: a.x * b, y: a.y * b };
+}
+
+export function minusExtent(a: Extent, b: Extent): Extent {
     return { width: a.width - b.width, height: a.height - b.height };
 }
 

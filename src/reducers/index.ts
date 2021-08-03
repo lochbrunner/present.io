@@ -1,7 +1,7 @@
 
-import { initState, Rectangle, State } from '../store';
+import { AnyObject, initState, Rectangle, State } from '../store';
 import arrayMove from 'array-move';
-import { Vector } from 'common/math';
+import { addVec, Vector } from '../common/math';
 
 export interface ChangeSelection {
     state: boolean;
@@ -62,11 +62,23 @@ export default (state: State = initState(), action: Action) => {
         case 'selected-move':
             {
                 const { delta } = (action.payload as any);
+                const move = (o: AnyObject): AnyObject => {
+                    if (o.type === 'rect') {
+                        return { ...o, upperLeft: add(o.upperLeft, delta), origin: add(o.origin, delta) };
+                    } else if (o.type === 'ellipse') {
+                        return { ...o, center: add(o.center, delta), origin: add(o.origin, delta) }
+                    }
+                    else {
+                        return { ...(o as any) };
+                    }
+                }
                 return {
                     ...state, objects: state.objects
-                        .map(o => { if (o.isSelected) { return { ...o, upperLeft: add(o.upperLeft, delta), origin: add(o.origin, delta) } } else { return o; } })
+                        .map(o => { if (o.isSelected) { return move(o); } else { return o; } })
                 };
-            }
+            };
+
+
         case 'selected-rotate':
             {
                 const rotation = (action.payload as any);
@@ -76,8 +88,16 @@ export default (state: State = initState(), action: Action) => {
             {
                 const { origin, index, deltaUpperLeft } = (action.payload as any);
                 const prevObject = state.objects[index]
-                const object = { ...prevObject, origin: add(origin, prevObject.origin), upperLeft: add(deltaUpperLeft, prevObject.upperLeft) };
-                return { ...state, objects: [...state.objects.slice(0, index), object, ...state.objects.slice(index + 1)] }
+                const createObject = (o: AnyObject): AnyObject => {
+                    if (o.type === 'rect') {
+                        return { ...o, origin: add(origin, o.origin), upperLeft: add(deltaUpperLeft, o.upperLeft) };
+                    } else if (o.type === 'ellipse') {
+                        return { ...o, origin: add(origin, o.origin), center: add(deltaUpperLeft, o.center) };
+                    } else {
+                        return { ...(o as any) };
+                    }
+                }
+                return { ...state, objects: [...state.objects.slice(0, index), createObject(prevObject), ...state.objects.slice(index + 1)] }
             }
         case 'move':
             {
@@ -86,8 +106,17 @@ export default (state: State = initState(), action: Action) => {
             }
         case 'scale': {
             const { origin, upperLeft, extent, index } = (action.payload as any);
-            const object = { ...state.objects[index], upperLeft, extent, origin };
-            return { ...state, objects: [...state.objects.slice(0, index), object, ...state.objects.slice(index + 1)] }
+            const createObject = (prevObject: AnyObject) => {
+                if (prevObject.type === 'rect') {
+                    return { ...prevObject, upperLeft, extent, origin };
+                } else if (prevObject.type === 'ellipse') {
+                    const radius = { x: extent.width / 2, y: extent.height / 2 };
+                    return { ...prevObject, origin, center: addVec(upperLeft, radius), radius };
+                } else {
+                    return { ...(prevObject as any) };
+                }
+            }
+            return { ...state, objects: [...state.objects.slice(0, index), createObject(state.objects[index]), ...state.objects.slice(index + 1)] }
         }
         case 'selected-delete':
             return { ...state, objects: state.objects.filter(o => !o.isSelected) };
