@@ -6,6 +6,44 @@ import FormGroup from '@material-ui/core/FormGroup';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 
 import './property-box.scss';
+import { createStyles, InputBase, MenuItem, Select, Theme, withStyles } from '@material-ui/core';
+
+const BootstrapInput = withStyles((theme: Theme) =>
+    createStyles({
+        root: {
+            'label + &': {
+                marginTop: theme.spacing(3),
+            },
+        },
+        input: {
+            borderRadius: 4,
+            position: 'relative',
+            backgroundColor: theme.palette.background.paper,
+            border: '1px solid #ced4da',
+            fontSize: 16,
+            padding: '10px 26px 10px 12px',
+            transition: theme.transitions.create(['border-color', 'box-shadow']),
+            // Use the system font instead of the default Roboto font.
+            fontFamily: [
+                '-apple-system',
+                'BlinkMacSystemFont',
+                '"Segoe UI"',
+                'Roboto',
+                '"Helvetica Neue"',
+                'Arial',
+                'sans-serif',
+                '"Apple Color Emoji"',
+                '"Segoe UI Emoji"',
+                '"Segoe UI Symbol"',
+            ].join(','),
+            '&:focus': {
+                borderRadius: 4,
+                borderColor: '#80bdff',
+                boxShadow: '0 0 0 0.2rem rgba(0,123,255,.25)',
+            },
+        },
+    }),
+)(InputBase);
 
 export interface Props {
     selectedObjects: AnyObject[];
@@ -75,6 +113,25 @@ function StringRow(props: { label: string, valueName: string, object: any, chang
     );
 }
 
+function EnumRow(props: { label: string, valueName: string, object: any, values: any, change: (name: string, value: any) => void }) {
+    return (
+        <FormGroup row>
+            <FormControlLabel labelPlacement="start" label={props.label} control={
+                <Select
+                    labelId={props.label}
+                    id={props.label}
+                    value={props.object[props.valueName]}
+                    onChange={e => props.change(props.valueName, e.target.value)}
+                    input={<BootstrapInput />}
+                >
+                    {props.values}
+                </Select>
+            } />
+        </FormGroup>
+    );
+
+}
+
 // function ExtentRow(props: { key: number, label: string, valueName: string, object: any, change: (name: string, value: any) => void }) {
 //     const object = props.object[props.valueName];
 //     return object && (
@@ -85,15 +142,15 @@ function StringRow(props: { label: string, valueName: string, object: any, chang
 //     ) || '';
 // }
 
-// function VectorRow(props: { key: number, label: string, valueName: string, object: any, change: (name: string, value: any) => void }) {
-//     const object = props.object[props.valueName];
-//     return object && (
-//         <>
-//             <NumberRow key="x" label="x" valueName="x" object={object} change={(name, x) => props.change(props.valueName, { ...object, x })} />
-//             <NumberRow key="y" label="y" valueName="y" object={object} change={(name, y) => props.change(props.valueName, { ...object, y })} />
-//         </>
-//     ) || '';
-// }
+function VectorRow(props: { key: number, label: string, valueName: string, object: any, change: (name: string, value: any) => void }) {
+    const object = props.object[props.valueName];
+    return object && (
+        <>
+            <NumberRow key="x" label={`${props.label}.x`} valueName="x" object={object} change={(name, x) => props.change(props.valueName, { ...object, x })} />
+            <NumberRow key="y" label={`${props.label}.y`} valueName="y" object={object} change={(name, y) => props.change(props.valueName, { ...object, y })} />
+        </>
+    ) || '';
+}
 
 export default function render(props: Props) {
     const defaultColors = ['red', 'blue', 'green', 'black', 'yellow', 'orange'];
@@ -119,44 +176,81 @@ export default function render(props: Props) {
         }
         const object = props.selectedObjects[0];
 
-        const Properties = () => {
-            if (object.type === 'rect') {
-                return (
-                    <>
-                        <StringRow key={0} object={object} change={props.setProperty} label="name" valueName="name" />
-                        <ColorRow key={1} object={object} label="fill" valueName="fillColor" colorPallette={fillColorPalette} change={changeFillColor} />
-                        <ColorRow key={2} object={object} label="border" valueName="borderColor" colorPallette={fillColorPalette} change={changeBorderColor} />
-                        <NumberRow key={3} object={object} change={props.setProperty} label="border width" valueName="borderWidth" />
-                        <NumberRow key={4} object={object} change={props.setProperty} label="rx" valueName="radiusX" />
-                        <NumberRow key={5} object={object} change={props.setProperty} label="ry" valueName="radiusY" />
-                    </>
-                );
-            } else if (object.type === 'ellipse') {
-                return (
-                    <>
-                        <StringRow key={0} object={object} change={props.setProperty} label="name" valueName="name" />
-                        <ColorRow key={1} object={object} label="fill" valueName="fillColor" colorPallette={fillColorPalette} change={changeFillColor} />
-                        <ColorRow key={2} object={object} label="border" valueName="borderColor" colorPallette={fillColorPalette} change={changeBorderColor} />
-                        <NumberRow key={3} object={object} change={props.setProperty} label="border width" valueName="borderWidth" />
-                        <NumberRow key={4} object={object} change={props.setProperty} label="path length" valueName="pathLength" />
-                    </>
-                );
-            }
-            else {
-                return <></>;
-            }
+        const common = (
+            <>
+                <StringRow key={0} object={object} change={props.setProperty} label="name" valueName="name" />
+                <ColorRow key={1} object={object} label="fill" valueName="fillColor" colorPallette={fillColorPalette} change={changeFillColor} />
+                <ColorRow key={2} object={object} label="border" valueName="borderColor" colorPallette={fillColorPalette} change={changeBorderColor} />
+                <NumberRow key={3} object={object} change={props.setProperty} label="border width" valueName="borderWidth" />
+            </>
+        );
+
+        if (object.type === 'rect') {
+            return (
+                <div className="property-box">
+                    {common}
+                    <NumberRow key={4} object={object} change={props.setProperty} label="rx" valueName="radiusX" />
+                    <NumberRow key={5} object={object} change={props.setProperty} label="ry" valueName="radiusY" />
+                </div>
+            );
+        } else if (object.type === 'ellipse') {
+            return (
+                <div className="property-box">
+                    {common}
+                    <NumberRow key={4} object={object} change={props.setProperty} label="path length" valueName="pathLength" />
+                </div>
+            );
+        }
+        else if (object.type === 'text') {
+            const fontFamilies = [
+                'serif',
+                'sans-serif',
+                'cursive',
+                'fantasy',
+                'monospace',
+                'Gill Sans Extrabold',
+                'Goudy Bookletter 1911',
+                'system-ui',
+                'ui-serif',
+                'ui-sans-serif',
+                'ui-monospace',
+                'ui-rounded',
+                'emoji',
+                'math',
+                'fangsong',
+            ].map((v, i) => <MenuItem key={i} value={v}>{v}</MenuItem>);
+            const fontStyles = [
+                'normal',
+                'italic',
+                'oblique',
+            ].map((v, i) => <MenuItem key={i} value={v}>{v}</MenuItem>);
+            const fontWeights = [
+                'normal',
+                'bold',
+                'bolder',
+                'lighter',
+            ].map((v, i) => <MenuItem key={i} value={v}>{v}</MenuItem>);
+            const changeNested = (name: string, value: any) => props.setProperty('style', { ...object.style, [name]: value });
+            return (
+                <div className="property-box">
+                    {common}
+                    <StringRow key={4} object={object} change={props.setProperty} label="content" valueName="content" />
+                    <NumberRow key={5} object={object} change={props.setProperty} label="glyph rotation" valueName="glyphRotation" />
+                    <VectorRow key={6} object={object} change={props.setProperty} label="shift" valueName="shift" />
+                    <EnumRow key={7} object={object.style} label="font family" valueName="fontFamily" values={fontFamilies}
+                        change={changeNested} />
+                    <StringRow key={8} object={object.style} change={changeNested} label="font size" valueName="fontSize" />
+                    <EnumRow key={9} object={object.style} label="font style" valueName="fontStyle" values={fontStyles}
+                        change={changeNested} />
+                    <NumberRow key={10} object={object.style} change={changeNested} label="font stretch" valueName="fontStretch" />
+                    <EnumRow key={9} object={object.style} label="font weight" valueName="fontWeight" values={fontWeights}
+                        change={changeNested} />
+                </div>
+            );
+        } else {
+            return <div className="property-box"></div>;
         }
 
-        return (
-            <div className="property-box">
-                <div>
-                    <Properties />
-                    {/* <ExtentRow key={6} object={object} change={props.setProperty} label="size" valueName="extent" />
-                    <VectorRow key={7} object={object} change={props.setProperty} label="position" valueName="center" />
-                    <NumberRow key={8} object={object} change={props.setProperty} label="rotation" valueName="rotation" /> */}
-                </div>
-            </div>
-        );
     } else {
         return (
             <div className="property-box">

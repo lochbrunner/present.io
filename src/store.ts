@@ -35,7 +35,26 @@ export interface Ellipse extends BaseObject {
     pathLength: number;
 }
 
-export type AnyObject = Rectangle | Ellipse;
+export interface TextObject extends BaseObject {
+    type: 'text';
+    content: string;
+    start: Vector;
+    shift: Vector;
+    glyphRotation: number;
+    lengthAdjust: string;
+    textLength: string;
+    style: {
+        fontFamily?: string;
+        fontSize?: string;
+        fontSizeAdjust?: any;
+        fontStretch: number;
+        fontStyle?: 'normal' | 'italic' | 'oblique';
+        fontVariant?: any;
+        fontWeight?: 'normal' | 'bold' | 'bolder' | 'lighter' | number;
+    }
+}
+
+export type AnyObject = Rectangle | Ellipse | TextObject;
 
 
 export interface Settings {

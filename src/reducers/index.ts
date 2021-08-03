@@ -66,10 +66,15 @@ export default (state: State = initState(), action: Action) => {
                     if (o.type === 'rect') {
                         return { ...o, upperLeft: add(o.upperLeft, delta), origin: add(o.origin, delta) };
                     } else if (o.type === 'ellipse') {
-                        return { ...o, center: add(o.center, delta), origin: add(o.origin, delta) }
+                        return { ...o, center: add(o.center, delta), origin: add(o.origin, delta) };
                     }
-                    else {
-                        return { ...(o as any) };
+                    else if (o.type === 'text') {
+                        return { ...o, start: add(o.start, delta), origin: add(o.origin, delta) };
+
+                    } else {
+                        return {
+                            ...(o as any)
+                        };
                     }
                 }
                 return {
@@ -93,6 +98,8 @@ export default (state: State = initState(), action: Action) => {
                         return { ...o, origin: add(origin, o.origin), upperLeft: add(deltaUpperLeft, o.upperLeft) };
                     } else if (o.type === 'ellipse') {
                         return { ...o, origin: add(origin, o.origin), center: add(deltaUpperLeft, o.center) };
+                    } else if (o.type === 'text') {
+                        return { ...o, origin: add(origin, o.origin), start: add(deltaUpperLeft, o.start) };
                     } else {
                         return { ...(o as any) };
                     }

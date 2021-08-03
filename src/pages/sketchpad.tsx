@@ -1,7 +1,7 @@
 import React from 'react';
 import { connect } from 'react-redux';
 import { ChangeSelection } from 'reducers';
-import { Camera, Color, AnyObject, Rectangle, Settings, State as RootState, Ellipse } from 'store';
+import { Camera, Color, AnyObject, Rectangle, Settings, State as RootState, Ellipse, TextObject } from 'store';
 
 import Outliner from '../components/outliner';
 import PropertyBox from '../components/property-box';
@@ -71,7 +71,7 @@ interface RectangleProperties extends GeneralProperties {
     radiusY: number;
 }
 
-export type WorkingStates = 'rectangle' | 'select' | 'ellipse';
+export type WorkingStates = 'rectangle' | 'select' | 'ellipse' | 'text';
 
 interface MoveState {
     type: 'move';
@@ -218,6 +218,18 @@ function ManipulationTool(props: { objects: AnyObject[], svgRef: SVGSVGElement |
                     {createItems(extent, origin, upperLeft, rotation, rotationPivot)}
                 </g>
             );
+        } else if (object.type === 'text') {
+            const { origin, rotation } = object;
+            const pivotRadius = 60;
+            const rotationPivot = { x: origin.x, y: origin.y - pivotRadius };
+            // TODO get extent of rendered text
+            return (
+                <g transform={createTransform(object)} className="selection-marker" key={i}>
+                    <line x1={origin.x} y1={origin.y} x2={rotationPivot.x} y2={rotationPivot.y} stroke="rgb(127,127,255)" strokeWidth="2" />
+                    <circle className="tool origin" onMouseDown={onOriginDown(i, origin, rotation)} {...toolStyle} fill="rgba(220,240,255, 0.5)" cx={origin.x} cy={origin.y} />
+                    <circle className="tool rotate" onMouseDown={onRotateDown(i, origin, rotation)} {...toolStyle} cx={rotationPivot.x} cy={rotationPivot.y} />
+                </g>
+            );
         } else {
             return null;
         }
@@ -361,6 +373,11 @@ function CandidateElement(props: { candidate: Candidate | null }) {
         return (
             <ellipse cx={center.x} cy={center.y} rx={radius.x} ry={radius.y} fill={rgbaColor(candidate.fillColor)} strokeWidth={candidate.borderWidth} stroke={rgbaColor(candidate.borderColor)} />
         );
+    } else if (candidate.type === 'text') {
+        const style: any = { userSelect: 'none' }
+        return (
+            <text style={style} x={candidate.start.x} y={candidate.start.y} fill={rgbaColor(candidate.fillColor)}>{candidate.content}</text>
+        );
     }
     else {
         return null;
@@ -454,6 +471,10 @@ function render(props: Props & Actions) {
                     radius.y = Math.abs(radius.y);
                     changeCandidate({ ...candidate, radius, center });
                 }
+                else if (candidate.type === 'text') {
+                    const start = { x: curX, y: curY };
+                    changeCandidate({ ...candidate, start });
+                }
             }
             else if (manipulationState !== null) {
                 if (manipulationState.type === 'move') {
@@ -505,6 +526,15 @@ function render(props: Props & Actions) {
                 });
                 props.deselectAll();
             }
+            else if (workingState === 'text') {
+                const name = `text ${props.objects.length}`;
+                changeCandidate({
+                    content: 'abc', start: { x, y }, shift: { x: 0, y: 0 }, glyphRotation: 0, lengthAdjust: '', textLength: '', style: { fontStretch: 100 },
+                    rotation: 0, skew: { x: 0, y: 0 }, origin: { x, y }, type: 'text',
+                    mouseDown: { x, y }, name, isSelected: true, ...drawProperties
+                });
+                props.deselectAll();
+            }
         }
     };
     const onMouseUp = (e: React.MouseEvent<SVGSVGElement>) => {
@@ -519,6 +549,9 @@ function render(props: Props & Actions) {
                     candidate.origin = { ...candidate.center };
                     props.add([candidate]);
                 }
+            } else if (candidate.type === 'text') {
+                candidate.borderWidth = 0;
+                props.add([candidate]);
             }
             changeCandidate(null);
         } else {
@@ -593,8 +626,13 @@ function render(props: Props & Actions) {
                 changeWorkingState('select');
             } else if (e.key === 'v' && workingState !== 'rectangle') {
                 changeWorkingState('rectangle');
+                changeDrawProperties({ ...drawProperties, borderWidth: 1 });
             } else if (e.key === 'e' && workingState !== 'ellipse') {
                 changeWorkingState('ellipse');
+                changeDrawProperties({ ...drawProperties, borderWidth: 1 });
+            } else if (e.key === 't' && workingState !== 'text') {
+                changeWorkingState('text');
+                changeDrawProperties({ ...drawProperties, borderWidth: 0 });
             }
         }
     };
@@ -650,6 +688,15 @@ function render(props: Props & Actions) {
         ...commonStyle(object, index),
     });
 
+    const textStyle = (object: TextObject, index: number) => ({
+        ...commonStyle(object, index),
+        fontFamily: object.style.fontFamily,
+        fontSize: object.style.fontSize,
+        fontStyle: object.style.fontStyle,
+        fontStretch: `${object.style.fontStretch}%`,
+        fontWeight: object.style.fontWeight,
+    });
+
     const candidateObject = <CandidateElement candidate={candidate} />;
     const objects = props.objects.map((data, i) => {
         if (data.type === 'rect') {
@@ -661,6 +708,13 @@ function render(props: Props & Actions) {
             return (
                 <ellipse key={i} rx={data.radius.x} ry={data.radius.y} cx={data.center.x} cy={data.center.y} pathLength={data.pathLength}
                     {...ellipseStyle(data, i)} />
+            );
+        } else if (data.type === 'text') {
+            const { start } = data;
+            return (
+                <text style={{ userSelect: 'none' }} {...start} {...textStyle(data, i)} >
+                    {data.content}
+                </text>
             );
         } else {
             return undefined;
