@@ -25,6 +25,15 @@ function add(a: Vector, b: Vector, snap?: number): Vector {
     return orig;
 }
 
+function snapNearest(old1: number, old2: number, a: number, b: number): [number, number] {
+    const varA1 = Math.abs(old1 - a) + Math.abs(old2 - b);
+    const varA2 = Math.abs(old2 - a) + Math.abs(old1 - b);
+    if (varA1 < varA2) {
+        return [a, b];
+    } else {
+        return [b, a];
+    }
+}
 
 export default (state: State = initState(), action: Action) => {
     switch (action.type) {
@@ -71,6 +80,8 @@ export default (state: State = initState(), action: Action) => {
                     else if (o.type === 'text') {
                         return { ...o, start: add(o.start, delta), origin: add(o.origin, delta) };
 
+                    } else if (o.type === 'line') {
+                        return { ...o, start: add(o.start, delta), end: add(o.end, delta), origin: add(o.origin, delta) };
                     } else {
                         return {
                             ...(o as any)
@@ -100,6 +111,8 @@ export default (state: State = initState(), action: Action) => {
                         return { ...o, origin: add(origin, o.origin), center: add(deltaUpperLeft, o.center) };
                     } else if (o.type === 'text') {
                         return { ...o, origin: add(origin, o.origin), start: add(deltaUpperLeft, o.start) };
+                    } else if (o.type === 'line') {
+                        return { ...o, origin: add(origin, o.origin), start: add(deltaUpperLeft, o.start), end: add(deltaUpperLeft, o.end) };
                     } else {
                         return { ...(o as any) };
                     }
@@ -119,6 +132,12 @@ export default (state: State = initState(), action: Action) => {
                 } else if (prevObject.type === 'ellipse') {
                     const radius = { x: extent.width / 2, y: extent.height / 2 };
                     return { ...prevObject, origin, center: addVec(upperLeft, radius), radius };
+                } else if (prevObject.type === 'line') {
+                    const [x1, x2] = snapNearest(prevObject.start.x, prevObject.end.x, upperLeft.x, upperLeft.x + extent.width);
+                    const [y1, y2] = snapNearest(prevObject.start.y, prevObject.end.y, upperLeft.y, upperLeft.y + extent.height);
+                    const start = { x: x1, y: y1 };
+                    const end = { x: x2, y: y2 };
+                    return { ...prevObject, origin, start, end };
                 } else {
                     return { ...(prevObject as any) };
                 }

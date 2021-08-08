@@ -12,8 +12,11 @@ export interface Color {
 export interface BaseObject {
     name: string;
     isSelected: boolean;
+    /** @deprecated */
     fillColor: Color;
+    /** @deprecated same as strokeColor */
     borderColor: Color;
+    /** @deprecated same as strokeWidth */
     borderWidth: number;
     rotation: number;
     origin: Vector; // origin of rotation
@@ -32,6 +35,7 @@ export interface Ellipse extends BaseObject {
     type: 'ellipse';
     center: Vector;
     radius: Vector;
+    /**Defines the total path length in user units. */
     pathLength: number;
 }
 
@@ -54,7 +58,17 @@ export interface TextObject extends BaseObject {
     }
 }
 
-export type AnyObject = Rectangle | Ellipse | TextObject;
+export interface LineObject extends BaseObject {
+    type: 'line';
+    /** x1, y1 */
+    start: Vector;
+    /** x2, y2 */
+    end: Vector;
+    /**Defines the total path length in user units. */
+    pathLength: number;
+}
+
+export type AnyObject = Rectangle | Ellipse | TextObject | LineObject;
 
 
 export interface Settings {

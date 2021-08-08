@@ -247,6 +247,15 @@ export default function render(props: Props) {
                         change={changeNested} />
                 </div>
             );
+        } else if (object.type === 'line') {
+            return (
+                <div className="property-box">
+                    <StringRow key={0} object={object} change={props.setProperty} label="name" valueName="name" />
+                    <ColorRow key={2} object={object} label="stroke" valueName="borderColor" colorPallette={fillColorPalette} change={changeBorderColor} />
+                    <NumberRow key={3} object={object} change={props.setProperty} label="stroke width" valueName="borderWidth" />
+                    <NumberRow key={4} object={object} change={props.setProperty} label="path length" valueName="pathLength" />
+                </div>
+            );
         } else {
             return <div className="property-box"></div>;
         }

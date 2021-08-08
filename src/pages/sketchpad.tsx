@@ -1,7 +1,7 @@
 import React from 'react';
 import { connect } from 'react-redux';
 import { ChangeSelection } from 'reducers';
-import { Camera, Color, AnyObject, Rectangle, Settings, State as RootState, Ellipse, TextObject } from 'store';
+import { Camera, Color, AnyObject, Rectangle, Settings, State as RootState, Ellipse, TextObject, LineObject } from 'store';
 
 import Outliner from '../components/outliner';
 import PropertyBox from '../components/property-box';
@@ -71,7 +71,7 @@ interface RectangleProperties extends GeneralProperties {
     radiusY: number;
 }
 
-export type WorkingStates = 'rectangle' | 'select' | 'ellipse' | 'text';
+export type WorkingStates = 'rectangle' | 'select' | 'ellipse' | 'text' | 'line';
 
 interface MoveState {
     type: 'move';
@@ -230,6 +230,17 @@ function ManipulationTool(props: { objects: AnyObject[], svgRef: SVGSVGElement |
                     <circle className="tool rotate" onMouseDown={onRotateDown(i, origin, rotation)} {...toolStyle} cx={rotationPivot.x} cy={rotationPivot.y} />
                 </g>
             );
+        } else if (object.type === 'line') {
+            const { origin, rotation, start, end } = object;
+            const extent = { width: Math.abs(start.x - end.x), height: Math.abs(start.y - end.y) };
+            const upperLeft = { x: Math.min(start.x, end.x), y: Math.min(start.y, end.y) };
+            const pivotRadius = 0.5 * extent.height + 60;
+            const rotationPivot = { x: origin.x, y: origin.y - pivotRadius };
+            return (
+                <g transform={createTransform(object)} className="selection-marker" key={i}>
+                    {createItems(extent, origin, upperLeft, rotation, rotationPivot)}
+                </g>
+            );
         } else {
             return null;
         }
@@ -378,6 +389,11 @@ function CandidateElement(props: { candidate: Candidate | null }) {
         return (
             <text style={style} x={candidate.start.x} y={candidate.start.y} fill={rgbaColor(candidate.fillColor)}>{candidate.content}</text>
         );
+    } else if (candidate.type === 'line') {
+        const { start, end } = candidate;
+        return (
+            <line x1={start.x} y1={start.y} x2={end.x} y2={end.y} stroke={rgbaColor(candidate.borderColor)} />
+        );
     }
     else {
         return null;
@@ -475,6 +491,10 @@ function render(props: Props & Actions) {
                     const start = { x: curX, y: curY };
                     changeCandidate({ ...candidate, start });
                 }
+                else if (candidate.type === 'line') {
+                    const end = { x: curX, y: curY };
+                    changeCandidate({ ...candidate, end });
+                }
             }
             else if (manipulationState !== null) {
                 if (manipulationState.type === 'move') {
@@ -510,8 +530,8 @@ function render(props: Props & Actions) {
         }
         else {
             const { x, y } = getMousePos(e);
+            const name = `${workingState} ${props.objects.length}`;
             if (workingState === 'rectangle') {
-                const name = `rectangle ${props.objects.length}`;
                 changeCandidate({
                     upperLeft: { x, y }, extent: { width: 0, height: 0 }, rotation: 0, skew: { x: 0, y: 0 }, origin: { x, y }, type: 'rect',
                     mouseDown: { x, y }, name, isSelected: true, ...drawProperties
@@ -519,7 +539,6 @@ function render(props: Props & Actions) {
                 props.deselectAll();
             }
             else if (workingState === 'ellipse') {
-                const name = `ellipse ${props.objects.length}`;
                 changeCandidate({
                     center: { x, y }, radius: { x: 0, y: 0 }, pathLength: 0, rotation: 0, skew: { x: 0, y: 0 }, origin: { x, y }, type: 'ellipse',
                     mouseDown: { x, y }, name, isSelected: true, ...drawProperties
@@ -527,10 +546,20 @@ function render(props: Props & Actions) {
                 props.deselectAll();
             }
             else if (workingState === 'text') {
-                const name = `text ${props.objects.length}`;
                 changeCandidate({
                     content: 'abc', start: { x, y }, shift: { x: 0, y: 0 }, glyphRotation: 0, lengthAdjust: '', textLength: '', style: { fontStretch: 100 },
                     rotation: 0, skew: { x: 0, y: 0 }, origin: { x, y }, type: 'text',
+                    mouseDown: { x, y }, name, isSelected: true, ...drawProperties
+                });
+                props.deselectAll();
+            }
+            else if (workingState === 'line') {
+                changeCandidate({
+                    type: 'line',
+                    start: { x, y },
+                    end: { x, y },
+                    pathLength: 0,
+                    rotation: 0, skew: { x: 0, y: 0 }, origin: { x, y },
                     mouseDown: { x, y }, name, isSelected: true, ...drawProperties
                 });
                 props.deselectAll();
@@ -551,6 +580,11 @@ function render(props: Props & Actions) {
                 }
             } else if (candidate.type === 'text') {
                 candidate.borderWidth = 0;
+                props.add([candidate]);
+            } else if (candidate.type === 'line') {
+                candidate.borderWidth = 2;
+                const { start, end } = candidate;
+                candidate.origin = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
                 props.add([candidate]);
             }
             changeCandidate(null);
@@ -633,6 +667,9 @@ function render(props: Props & Actions) {
             } else if (e.key === 't' && workingState !== 'text') {
                 changeWorkingState('text');
                 changeDrawProperties({ ...drawProperties, borderWidth: 0 });
+            } else if (e.key === 'l' && workingState !== 'line') {
+                changeWorkingState('line');
+                changeDrawProperties({ ...drawProperties, borderWidth: 0 });
             }
         }
     };
@@ -697,6 +734,10 @@ function render(props: Props & Actions) {
         fontWeight: object.style.fontWeight,
     });
 
+    const lineStyle = (object: LineObject, index: number) => ({
+        ...commonStyle(object, index),
+    });
+
     const candidateObject = <CandidateElement candidate={candidate} />;
     const objects = props.objects.map((data, i) => {
         if (data.type === 'rect') {
@@ -716,6 +757,9 @@ function render(props: Props & Actions) {
                     {data.content}
                 </text>
             );
+        } else if (data.type === 'line') {
+            const { start, end } = data;
+            return <line x1={start.x} y1={start.y} x2={end.x} y2={end.y} {...lineStyle(data, i)} />;
         } else {
             return undefined;
         }

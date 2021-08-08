@@ -1,0 +1,7 @@
+<svg viewBox="0 0 24 24">
+    <g>
+        <line x1="5" y1="16" x2="19" y2="8" stroke="black" stroke-width="2" />
+        <circle cx="5" cy="16" r="3" fill="black"/>
+        <circle cx="19" cy="8" r="3" fill="black" />
+    </g>
+</svg>
