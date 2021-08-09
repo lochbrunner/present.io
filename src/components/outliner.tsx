@@ -7,7 +7,7 @@ import ArrowRightIcon from '@material-ui/icons/ArrowRight';
 import ArrowDropDownIcon from '@material-ui/icons/ArrowDropDown';
 
 import { ChangeSelection } from 'reducers';
-import { AnyObject } from 'store';
+import { AnyObject } from '../objects';
 
 import './outliner.scss';
 import { RectIcon } from './icons';

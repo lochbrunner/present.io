@@ -1,10 +1,11 @@
 import React from 'react';
-import { AnyObject, Color } from 'store';
 import { ColorPicker, createColor, Color as ComponentColor } from 'material-ui-color';
 import TextField from '@material-ui/core/TextField';
 import FormGroup from '@material-ui/core/FormGroup';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 
+import { AnyObject, wrap } from '../objects';
+import { Color } from '../store';
 import './property-box.scss';
 import { createStyles, InputBase, MenuItem, Select, Theme, withStyles } from '@material-ui/core';
 
@@ -89,7 +90,7 @@ function ColorRow(props: { label: string, valueName: string, colorPallette: Comp
     );
 }
 
-function NumberRow(props: { label: string, valueName: string, object: any, change: (name: string, value: any) => void, step?: number }) {
+export function NumberRow(props: { label: string, valueName: string, object: any, change: (name: string, value: any) => void, step?: number }) {
     return (
         <FormGroup row>
             <FormControlLabel labelPlacement="start" label={props.label} control={
@@ -257,7 +258,7 @@ export default function render(props: Props) {
                 </div>
             );
         } else {
-            return <div className="property-box"></div>;
+            return wrap(object)?.properties(common, props.setProperty) || null;
         }
 
     } else {

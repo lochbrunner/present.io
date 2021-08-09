@@ -2,7 +2,7 @@ import React from 'react';
 import { connect } from 'react-redux';
 import { ChangeSelection } from 'reducers';
 import { ActionCreators, StateWithHistory } from 'redux-undo';
-import { Camera, Color, AnyObject, Rectangle, Settings, State as RootState, Ellipse, TextObject, LineObject } from 'store';
+import { Camera, Color, Settings, State as RootState } from 'store';
 import { Paper } from '@material-ui/core';
 
 import Outliner from '../components/outliner';
@@ -12,6 +12,7 @@ import { Grid } from '../components/grid';
 import { createTransform, ManipulationState, ManipulationTool, ScaleState, WorkingStates } from '../components/manipulation-tool';
 import Header, { useStyles } from '../components/header';
 import { addVec, Extent, minusVec, Transformation, Vector } from '../common/math';
+import { AnyObject, Ellipse, LineObject, Rectangle, TextObject, createCandidate, wrap, Candidate, DrawProperties } from '../objects';
 
 import './sketchpad.scss';
 
@@ -56,24 +57,6 @@ interface Actions {
     updateSettings: (settings: Settings) => void;
     moveCamera: (deltaOffset: Vector) => void;
 }
-
-// interface Candidate extends CommonObject {
-//     mouseDown: Vector;
-// }
-
-type Candidate = AnyObject & { mouseDown: Vector }
-
-interface GeneralProperties {
-    fillColor: Color;
-    borderColor: Color;
-    borderWidth: number;
-}
-
-interface RectangleProperties extends GeneralProperties {
-    radiusX: number;
-    radiusY: number;
-}
-
 
 function fixedOrigin(deltaOrig: Vector, rotation: number): Vector {
     const transformation = new Transformation({ rotation: -rotation, scale: { width: 1, height: 1 }, translation: { x: 0, y: 0 } });
@@ -175,7 +158,7 @@ function CandidateElement(props: { candidate: Candidate | null }) {
         );
     }
     else {
-        return null;
+        return wrap(candidate)?.renderCandidate() || null;
     }
 }
 
@@ -185,7 +168,7 @@ function render(props: Props & Actions) {
     const [candidate, changeCandidate] = React.useState<Candidate | null>(null);
     const [workingState, changeWorkingState] = React.useState<WorkingStates>('rectangle');
     const [manipulationState, changeManipulationState] = React.useState<ManipulationState>(null);
-    const [drawProperties, changeDrawProperties] = React.useState<RectangleProperties>({
+    const [drawProperties, changeDrawProperties] = React.useState<DrawProperties>({
         fillColor: { red: 0, green: 0, blue: 255, opacity: 1 },
         borderColor: { red: 0, green: 0, blue: 0, opacity: 1 },
         borderWidth: 1,
@@ -274,6 +257,11 @@ function render(props: Props & Actions) {
                     const end = { x: curX, y: curY };
                     changeCandidate({ ...candidate, end });
                 }
+                else {
+                    const newCandidate = wrap(candidate)?.onCreation({ x: curX, y: curY });
+                    if (newCandidate !== undefined)
+                        changeCandidate(newCandidate);
+                }
             }
             else if (manipulationState !== null) {
                 if (manipulationState.type === 'move') {
@@ -316,42 +304,18 @@ function render(props: Props & Actions) {
             const { x, y } = getMouseRawPos(e);
             changeManipulationState({ type: 'move-camera', lastMouseDown: { x, y }, notUpdate: false });
         }
-        else {
-            const { x, y } = getMousePos(e);
-            const name = `${workingState} ${props.objects.length}`;
-            if (workingState === 'rectangle') {
-                changeCandidate({
-                    upperLeft: { x, y }, extent: { width: 0, height: 0 }, rotation: 0, skew: { x: 0, y: 0 }, origin: { x, y }, type: 'rect',
-                    mouseDown: { x, y }, name, isSelected: true, ...drawProperties
-                });
-                props.deselectAll();
+        else if (workingState !== 'select' && workingState !== 'vertex') {
+            const position = getMousePos(e);
+            if (candidate !== null) {
+                const newCandidate = wrap(candidate)?.onCreationMouseDown(position);
+                if (newCandidate !== undefined) {
+                    changeCandidate(newCandidate);
+                    return;
+                }
             }
-            else if (workingState === 'ellipse') {
-                changeCandidate({
-                    center: { x, y }, radius: { x: 0, y: 0 }, pathLength: 0, rotation: 0, skew: { x: 0, y: 0 }, origin: { x, y }, type: 'ellipse',
-                    mouseDown: { x, y }, name, isSelected: true, ...drawProperties
-                });
-                props.deselectAll();
-            }
-            else if (workingState === 'text') {
-                changeCandidate({
-                    content: 'abc', start: { x, y }, shift: { x: 0, y: 0 }, glyphRotation: 0, lengthAdjust: '', textLength: '', style: { fontStretch: 100 },
-                    rotation: 0, skew: { x: 0, y: 0 }, origin: { x, y }, type: 'text',
-                    mouseDown: { x, y }, name, isSelected: true, ...drawProperties
-                });
-                props.deselectAll();
-            }
-            else if (workingState === 'line') {
-                changeCandidate({
-                    type: 'line',
-                    start: { x, y },
-                    end: { x, y },
-                    pathLength: 0,
-                    rotation: 0, skew: { x: 0, y: 0 }, origin: { x, y },
-                    mouseDown: { x, y }, name, isSelected: true, ...drawProperties
-                });
-                props.deselectAll();
-            }
+            changeCandidate(createCandidate(workingState, position, drawProperties));
+            props.deselectAll();
+
         }
     };
     const onMouseUp = (e: React.MouseEvent<SVGSVGElement>) => {
@@ -360,22 +324,31 @@ function render(props: Props & Actions) {
                 if (candidate.extent.height > 10 && candidate.extent.width > 10) {
                     candidate.origin = { x: candidate.upperLeft.x + candidate.extent.width / 2, y: candidate.upperLeft.y + candidate.extent.height / 2 };
                     props.add([candidate]);
+                    changeCandidate(null);
                 }
             } else if (candidate.type === 'ellipse') {
                 if (candidate.radius.x > 10 && candidate.radius.y > 10) {
                     candidate.origin = { ...candidate.center };
                     props.add([candidate]);
+                    changeCandidate(null);
                 }
             } else if (candidate.type === 'text') {
                 candidate.borderWidth = 0;
                 props.add([candidate]);
+                changeCandidate(null);
             } else if (candidate.type === 'line') {
                 candidate.borderWidth = 2;
                 const { start, end } = candidate;
                 candidate.origin = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
                 props.add([candidate]);
+                changeCandidate(null);
+            } else {
+                const sealed = wrap(candidate)?.onCreationMouseUp(getMouseRawPos(e), changeCandidate);
+                if (sealed !== undefined) {
+                    props.add([sealed]);
+                }
             }
-            changeCandidate(null);
+
         } else {
             if (manipulationState !== null) {
                 changeManipulationState(null);
@@ -444,6 +417,14 @@ function render(props: Props & Actions) {
         } else {
             if (e.key === 'Delete') {
                 props.selectedDelete();
+            } else if (e.key === 'Enter') {
+                if (candidate !== null) {
+                    const sealed = wrap(candidate)?.onCreationEnded();
+                    if (sealed !== undefined) {
+                        props.add([sealed]);
+                        changeCandidate(null);
+                    }
+                }
             } else if (e.key === 'q' && workingState !== 'select') {
                 changeWorkingState('select');
             } else if (e.key === 'v' && workingState !== 'select') {
@@ -460,6 +441,9 @@ function render(props: Props & Actions) {
             } else if (e.key === 'l' && workingState !== 'line') {
                 changeWorkingState('line');
                 changeDrawProperties({ ...drawProperties, borderWidth: 0 });
+            } else if (e.key === 'p' && workingState !== 'polygon') {
+                changeWorkingState('polygon');
+                changeDrawProperties({ ...drawProperties, borderWidth: 0 });
             }
         }
     };
@@ -468,6 +452,7 @@ function render(props: Props & Actions) {
         strokeWidth: object.borderWidth,
         stroke: rgbaColor(object.borderColor),
         fill: rgbaColor(object.fillColor),
+        key: index,
         pointerEvents: workingState === 'select' ? 'auto' : 'none',
         transform: createTransform(object),
         className: `item ${object.isSelected ? 'selected' : ''}`,
@@ -532,12 +517,12 @@ function render(props: Props & Actions) {
     const objects = props.objects.map((data, i) => {
         if (data.type === 'rect') {
             return (
-                <rect key={i} width={data.extent.width} height={data.extent.height} x={data.upperLeft.x} y={data.upperLeft.y}
+                <rect width={data.extent.width} height={data.extent.height} x={data.upperLeft.x} y={data.upperLeft.y}
                     {...rectStyle(data, i)} />
             );
         } else if (data.type === 'ellipse') {
             return (
-                <ellipse key={i} rx={data.radius.x} ry={data.radius.y} cx={data.center.x} cy={data.center.y} pathLength={data.pathLength}
+                <ellipse rx={data.radius.x} ry={data.radius.y} cx={data.center.x} cy={data.center.y} pathLength={data.pathLength}
                     {...ellipseStyle(data, i)} />
             );
         } else if (data.type === 'text') {
@@ -551,7 +536,7 @@ function render(props: Props & Actions) {
             const { start, end } = data;
             return <line x1={start.x} y1={start.y} x2={end.x} y2={end.y} {...lineStyle(data, i)} />;
         } else {
-            return undefined;
+            return wrap(data)?.render(commonStyle(data, i));
         }
     });
 

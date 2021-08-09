@@ -2,6 +2,7 @@ import reducer, { Action } from './reducers';
 import undoable, { StateWithHistory } from 'redux-undo';
 import { createStore } from 'redux'
 import { Extent, Vector } from 'common/math';
+import { AnyObject } from './objects';
 
 export interface Color {
     red: number;        // [0,255]
@@ -9,67 +10,6 @@ export interface Color {
     blue: number;       // [0,255]
     opacity: number;    // [0,1]
 }
-export interface BaseObject {
-    name: string;
-    isSelected: boolean;
-    /** @deprecated */
-    fillColor: Color;
-    /** @deprecated same as strokeColor */
-    borderColor: Color;
-    /** @deprecated same as strokeWidth */
-    borderWidth: number;
-    rotation: number;
-    origin: Vector; // origin of rotation
-    skew: Vector;
-}
-
-export interface Rectangle extends BaseObject {
-    type: 'rect';
-    upperLeft: Vector;
-    extent: Extent;
-    radiusX: number;
-    radiusY: number;
-}
-
-export interface Ellipse extends BaseObject {
-    type: 'ellipse';
-    center: Vector;
-    radius: Vector;
-    /**Defines the total path length in user units. */
-    pathLength: number;
-}
-
-export interface TextObject extends BaseObject {
-    type: 'text';
-    content: string;
-    start: Vector;
-    shift: Vector;
-    glyphRotation: number;
-    lengthAdjust: string;
-    textLength: string;
-    style: {
-        fontFamily?: string;
-        fontSize?: string;
-        fontSizeAdjust?: any;
-        fontStretch: number;
-        fontStyle?: 'normal' | 'italic' | 'oblique';
-        fontVariant?: any;
-        fontWeight?: 'normal' | 'bold' | 'bolder' | 'lighter' | number;
-    }
-}
-
-export interface LineObject extends BaseObject {
-    type: 'line';
-    /** x1, y1 */
-    start: Vector;
-    /** x2, y2 */
-    end: Vector;
-    /**Defines the total path length in user units. */
-    pathLength: number;
-}
-
-export type AnyObject = Rectangle | Ellipse | TextObject | LineObject;
-
 
 export interface Settings {
     background: { paper: boolean; grid: boolean; gridStep: number }

@@ -1,8 +1,7 @@
 import React from 'react';
 
 import { Extent, minusVec, Vector } from '../common/math';
-import { AnyObject } from '../store';
-
+import { AnyObject, ObjectNames, wrap } from '../objects';
 
 export function createTransform(object: AnyObject) {
     const { origin, rotation } = object;
@@ -10,7 +9,7 @@ export function createTransform(object: AnyObject) {
     return `rotate(${rotation} ${origin.x} ${origin.y})`;
 }
 
-export type WorkingStates = 'select' | 'vertex' | 'rectangle' | 'ellipse' | 'text' | 'line';
+export type WorkingStates = 'select' | 'vertex' | ObjectNames;
 
 
 interface MoveState {
@@ -62,6 +61,13 @@ interface MoveCameraState {
 export type ManipulationState = (MoveState | ScaleState | RotateState | MoveOriginState | MoveVertexState | MoveCameraState) & {
     notUpdate: boolean;
 } | null;
+
+export const toolStyle = {
+    fill: 'rgb(220,240,255)',
+    stroke: 'rgb(147,187,255)',
+    strokeWidth: 2,
+    r: 6
+};
 
 export function ManipulationTool(props: { objects: AnyObject[], workingState: WorkingStates, svgRef: SVGSVGElement | null, changeManipulationState: (prop: ManipulationState) => void, getMousePos: (e: React.MouseEvent<any>) => Vector }) {
     const onScaleDown = (index: number, dirX: ScaleState['dirX'], dirY: ScaleState['dirY'], extent: Extent, upperLeft: Vector, rotation: number, dir: number, origin: Vector) => (e: React.MouseEvent<any>) => {
@@ -119,13 +125,6 @@ export function ManipulationTool(props: { objects: AnyObject[], workingState: Wo
             vertexIndex,
             notUpdate: true,
         });
-    };
-
-    const toolStyle = {
-        fill: 'rgb(220,240,255)',
-        stroke: 'rgb(147,187,255)',
-        strokeWidth: 2,
-        r: 6
     };
 
     const resizeLineStyle = {
@@ -206,7 +205,7 @@ export function ManipulationTool(props: { objects: AnyObject[], workingState: Wo
                 );
             }
         } else {
-            return null;
+            return wrap(object)?.tool(i, props.workingState, onVertexDown, createItems);
         }
     })
 

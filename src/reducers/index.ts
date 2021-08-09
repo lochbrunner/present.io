@@ -1,5 +1,6 @@
 
-import { AnyObject, initState, Rectangle, State } from '../store';
+import { initState, State } from '../store';
+import { AnyObject, Rectangle, wrap } from '../objects';
 import arrayMove from 'array-move';
 import { addVec, Vector } from '../common/math';
 
@@ -83,7 +84,8 @@ export default (state: State = initState(), action: Action) => {
                     } else if (o.type === 'line') {
                         return { ...o, start: add(o.start, delta), end: add(o.end, delta), origin: add(o.origin, delta) };
                     } else {
-                        return {
+                        return wrap(o)?.move(delta) ||
+                        {
                             ...(o as any)
                         };
                     }
@@ -114,7 +116,7 @@ export default (state: State = initState(), action: Action) => {
                     } else if (o.type === 'line') {
                         return { ...o, origin: add(origin, o.origin), start: add(deltaUpperLeft, o.start), end: add(deltaUpperLeft, o.end) };
                     } else {
-                        return { ...(o as any) };
+                        return wrap(o)?.moveOrigin(origin, deltaUpperLeft) || { ...(o as any) };
                     }
                 }
                 return { ...state, objects: [...state.objects.slice(0, index), createObject(prevObject), ...state.objects.slice(index + 1)] }
@@ -122,7 +124,7 @@ export default (state: State = initState(), action: Action) => {
         case 'move-vertex':
             {
                 const { index, vertexIndex, delta } = (action.payload as any);
-                const prevObject = state.objects[index]
+                const prevObject = state.objects[index];
                 const createObject = (o: AnyObject): AnyObject => {
                     if (o.type === 'line') {
                         if (vertexIndex === 0) {
@@ -132,7 +134,7 @@ export default (state: State = initState(), action: Action) => {
                         }
                     }
                     else {
-                        return { ...o };
+                        return wrap(o)?.moveVertex(vertexIndex, delta) || { ...o };
                     }
                 }
                 return { ...state, objects: [...state.objects.slice(0, index), createObject(prevObject), ...state.objects.slice(index + 1)] }
@@ -157,7 +159,7 @@ export default (state: State = initState(), action: Action) => {
                     const end = { x: x2, y: y2 };
                     return { ...prevObject, origin, start, end };
                 } else {
-                    return { ...(prevObject as any) };
+                    return wrap(prevObject)?.scale(origin, upperLeft, extent) || { ...(prevObject as any) };
                 }
             }
             return { ...state, objects: [...state.objects.slice(0, index), createObject(state.objects[index]), ...state.objects.slice(index + 1)] }
