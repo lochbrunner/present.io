@@ -22,3 +22,10 @@ export const LineIcon = createSvgIcon(
         <circle cx="19" cy="8" r="3" fill={color} />
     </g>, 'LineIcon'
 );
+
+export const VertexToolIcon = createSvgIcon(
+    <g>
+        <path transform="translate(2 -2)" d="M 3 17.25 V 21 h 3.75 L 17.81 9.94 l -3.75 -3.75 L 3 17.25 Z M 20.71 7.04 c 0.39 -0.39 0.39 -1.02 0 -1.41 l -2.34 -2.34 a 0.9959 0.9959 0 0 0 -1.41 0 l -1.83 1.83 l 3.75 3.75 l 1.83 -1.83 Z" />
+        <circle cx="6" cy="18" r="5" fill="none" stroke-width="2" stroke={color} />
+    </g>, 'VertexToolIcon'
+);

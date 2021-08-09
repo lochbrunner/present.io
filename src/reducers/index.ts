@@ -119,6 +119,24 @@ export default (state: State = initState(), action: Action) => {
                 }
                 return { ...state, objects: [...state.objects.slice(0, index), createObject(prevObject), ...state.objects.slice(index + 1)] }
             }
+        case 'move-vertex':
+            {
+                const { index, vertexIndex, delta } = (action.payload as any);
+                const prevObject = state.objects[index]
+                const createObject = (o: AnyObject): AnyObject => {
+                    if (o.type === 'line') {
+                        if (vertexIndex === 0) {
+                            return { ...o, start: add(o.start, delta) };
+                        } else {
+                            return { ...o, end: add(o.end, delta) };
+                        }
+                    }
+                    else {
+                        return { ...o };
+                    }
+                }
+                return { ...state, objects: [...state.objects.slice(0, index), createObject(prevObject), ...state.objects.slice(index + 1)] }
+            }
         case 'move':
             {
                 const { from, to } = (action.payload as any);

@@ -43,6 +43,10 @@ body {
                 &.rotate {
                     cursor: move;
                 }
+
+                &.vertex {
+                    cursor: pointer;
+                }
             }
             .item {
                 &.selected {
