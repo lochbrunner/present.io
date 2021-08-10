@@ -44,7 +44,7 @@ export class BaseWrapper {
         throw 'not implemented yet!';
     }
 
-    tool(index: number, workingState: WorkingStates, onVertexDown: (index: number, vertexIndex: number, rotation: number) => (e: React.MouseEvent<any>) => void, createItems: (extent: Extent, origin: Vector, upperLeft: Vector, rotation: number, rotationPivot: Vector) => JSX.Element): JSX.Element {
+    tool(index: number, workingState: WorkingStates, scale: number, onVertexDown: (index: number, vertexIndex: number, rotation: number) => (e: React.MouseEvent<any>) => void, createItems: (extent: Extent, origin: Vector, upperLeft: Vector, rotation: number, rotationPivot: Vector) => JSX.Element): JSX.Element {
         throw 'not implemented yet!';
     }
 

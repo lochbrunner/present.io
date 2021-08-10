@@ -2,7 +2,7 @@ import React from 'react';
 import { addVec, Extent, Vector } from '../common/math';
 import { Candidate, PolygonObject } from '../objects';
 import { BaseWrapper, rgbaColor } from './base';
-import { createTransform, toolStyle, WorkingStates } from '../components/manipulation-tool';
+import { createTransform, createToolStyle, WorkingStates } from '../components/manipulation-tool';
 import { NumberRow } from '../components/property-box';
 
 function createScale(prevWidth: number, prevStart: number, newWidth: number, newStart: number) {
@@ -65,7 +65,7 @@ export class PolygonWrapper extends BaseWrapper {
                 fill={rgbaColor(data.fillColor)} strokeWidth={data.borderWidth} stroke={rgbaColor(data.borderColor)} />);
     }
 
-    tool(index: number, workingState: WorkingStates, onVertexDown: (index: number, vertexIndex: number, rotation: number) => (e: React.MouseEvent<any>) => void, createItems: (extent: Extent, origin: Vector, upperLeft: Vector, rotation: number, rotationPivot: Vector) => JSX.Element): JSX.Element {
+    tool(index: number, workingState: WorkingStates, scale: number, onVertexDown: (index: number, vertexIndex: number, rotation: number) => (e: React.MouseEvent<any>) => void, createItems: (extent: Extent, origin: Vector, upperLeft: Vector, rotation: number, rotationPivot: Vector) => JSX.Element): JSX.Element {
         const { origin, rotation, points } = this.data;
         const upperLeft = { x: Math.min(...points.map(p => p.x)), y: Math.min(...points.map(p => p.y)) };
         const lowerRight = { x: Math.max(...points.map(p => p.x)), y: Math.max(...points.map(p => p.y)) };
@@ -80,6 +80,7 @@ export class PolygonWrapper extends BaseWrapper {
             );
         }
         else {
+            const toolStyle = createToolStyle(scale);
             const points = this.data.points.map((p, i) => <circle key={i} className="tool vertex" cx={p.x} cy={p.y} onMouseDown={onVertexDown(index, i, rotation)} {...toolStyle} />)
             return (
                 <g transform={createTransform(this.data)} className="selection-marker" key={index}>

@@ -192,6 +192,10 @@ export default (state: State = initState(), action: Action) => {
             const deltaOffset = (action.payload as any);
             return { ...state, camera: { ...state.camera, offset: add(deltaOffset, state.camera.offset) } };
         }
+        case 'scale-camera': {
+            const { scale, deltaOffset } = (action.payload as any);
+            return { ...state, camera: { ...state.camera, scale, offset: add(deltaOffset, state.camera.offset) } };
+        }
         default:
             return state;
     }

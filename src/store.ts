@@ -22,10 +22,11 @@ function initSettings(): Settings {
 
 export interface Camera {
     offset: Vector;
+    scale: number;
 }
 
-function initCamera() {
-    return { offset: { x: -20, y: -20 } };
+function initCamera(): Camera {
+    return { offset: { x: -20, y: -20 }, scale: 1 };
 }
 
 export interface State {

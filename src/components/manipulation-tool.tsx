@@ -76,21 +76,32 @@ export type ManipulationState = (MoveState | ScaleState | RotateState | MoveOrig
     notUpdate: boolean;
 } | null;
 
-export const toolStyle = {
-    fill: 'rgb(220,240,255)',
-    stroke: 'rgb(147,187,255)',
-    strokeWidth: 2,
-    r: 6
-};
-
 export interface ManipulationToolProps {
     objects: AnyObject[];
     workingState: WorkingStates;
     svgRef: SVGSVGElement | null;
+    scale: number;
     changeManipulationState: (prop: ManipulationState) => void;
     getMousePos: (e: React.MouseEvent<any>) => Vector;
     deleteVertex: (index: number, vertexIndex: number) => void;
     addVertex: (index: number, vertexIndex: number) => void;
+}
+
+export function createToolStyle(scale: number) {
+    return {
+        fill: 'rgb(220,240,255)',
+        stroke: 'rgb(147,187,255)',
+        strokeWidth: 2 / scale,
+        r: 6 / scale
+    };
+}
+
+export function createResizeLineStyle(scale: number) {
+    return {
+        fill: "rgb(127,127,255)",
+        stroke: "rgba(127,127,255,0.01)",
+        strokeWidth: `${10 / scale}`
+    };
 }
 
 export function ManipulationTool(props: ManipulationToolProps) {
@@ -157,27 +168,24 @@ export function ManipulationTool(props: ManipulationToolProps) {
             });
         }
     };
-
-    const resizeLineStyle = {
-        fill: "rgb(127,127,255)",
-        stroke: "rgba(127,127,255,0.01)",
-        strokeWidth: '10'
-    }
+    const { scale } = props;
+    const resizeLineStyle = createResizeLineStyle(scale);
+    const toolStyle = createToolStyle(scale);
 
     const tools = props.objects.map((object, i) => ({ object, i })).filter(data => data.object.isSelected).map(data => {
         const { object, i } = data;
         const createItems = (extent: Extent, origin: Vector, upperLeft: Vector, rotation: number, rotationPivot: Vector) => {
             return (
                 <>
-                    <rect onMouseDown={onScaleDown(i, 0, -1, extent, upperLeft, rotation, 0, origin)} className="tool ns" {...resizeLineStyle} height="2" width={extent.width} x={upperLeft.x} y={upperLeft.y - 1} />
-                    <rect onMouseDown={onScaleDown(i, 0, 1, extent, upperLeft, rotation, 180, origin)} className="tool ns" {...resizeLineStyle} height="2" width={extent.width} x={upperLeft.x} y={extent.height + upperLeft.y - 1} />
-                    <rect onMouseDown={onScaleDown(i, 1, 0, extent, upperLeft, rotation, 90, origin)} className="tool ew" {...resizeLineStyle} width="2" height={extent.height} x={upperLeft.x + extent.width - 1} y={upperLeft.y} />
-                    <rect onMouseDown={onScaleDown(i, -1, 0, extent, upperLeft, rotation, 270, origin)} className="tool ew" {...resizeLineStyle} width="2" height={extent.height} x={upperLeft.x - 1} y={upperLeft.y} />
+                    <rect onMouseDown={onScaleDown(i, 0, -1, extent, upperLeft, rotation, 0, origin)} className="tool ns" {...resizeLineStyle} height={2 / scale} width={extent.width} x={upperLeft.x} y={upperLeft.y - 1} />
+                    <rect onMouseDown={onScaleDown(i, 0, 1, extent, upperLeft, rotation, 180, origin)} className="tool ns" {...resizeLineStyle} height={2 / scale} width={extent.width} x={upperLeft.x} y={extent.height + upperLeft.y - 1} />
+                    <rect onMouseDown={onScaleDown(i, 1, 0, extent, upperLeft, rotation, 90, origin)} className="tool ew" {...resizeLineStyle} width={2 / scale} height={extent.height} x={upperLeft.x + extent.width - 1} y={upperLeft.y} />
+                    <rect onMouseDown={onScaleDown(i, -1, 0, extent, upperLeft, rotation, 270, origin)} className="tool ew" {...resizeLineStyle} width={2 / scale} height={extent.height} x={upperLeft.x - 1} y={upperLeft.y} />
                     <circle onMouseDown={onScaleDown(i, -1, -1, extent, upperLeft, rotation, 0, origin)} className="tool nw" {...toolStyle} cx={upperLeft.x} cy={upperLeft.y} />
                     <circle onMouseDown={onScaleDown(i, 1, -1, extent, upperLeft, rotation, 0, origin)} className="tool ne" {...toolStyle} cx={upperLeft.x + extent.width} cy={upperLeft.y} />
                     <circle onMouseDown={onScaleDown(i, -1, 1, extent, upperLeft, rotation, 0, origin)} className="tool ne" {...toolStyle} cx={upperLeft.x} cy={upperLeft.y + extent.height} />
                     <circle onMouseDown={onScaleDown(i, 1, 1, extent, upperLeft, rotation, 0, origin)} className="tool nw" {...toolStyle} cx={upperLeft.x + extent.width} cy={upperLeft.y + extent.height} />
-                    <line x1={origin.x} y1={origin.y} x2={rotationPivot.x} y2={rotationPivot.y} stroke="rgb(127,127,255)" strokeWidth="2" />
+                    <line x1={origin.x} y1={origin.y} x2={rotationPivot.x} y2={rotationPivot.y} stroke="rgb(127,127,255)" strokeWidth={2 / scale} />
                     <circle className="tool origin" onMouseDown={onOriginDown(i, origin, rotation)} {...toolStyle} fill="rgba(220,240,255, 0.5)" cx={origin.x} cy={origin.y} />
                     <circle className="tool rotate" onMouseDown={onRotateDown(i, origin, rotation)} {...toolStyle} cx={rotationPivot.x} cy={rotationPivot.y} />
                 </>
@@ -210,7 +218,7 @@ export function ManipulationTool(props: ManipulationToolProps) {
             // TODO get extent of rendered text
             return (
                 <g transform={createTransform(object)} className="selection-marker" key={i}>
-                    <line x1={origin.x} y1={origin.y} x2={rotationPivot.x} y2={rotationPivot.y} stroke="rgb(127,127,255)" strokeWidth="2" />
+                    <line x1={origin.x} y1={origin.y} x2={rotationPivot.x} y2={rotationPivot.y} stroke="rgb(127,127,255)" strokeWidth={2 / scale} />
                     <circle className="tool origin" onMouseDown={onOriginDown(i, origin, rotation)} {...toolStyle} fill="rgba(220,240,255, 0.5)" cx={origin.x} cy={origin.y} />
                     <circle className="tool rotate" onMouseDown={onRotateDown(i, origin, rotation)} {...toolStyle} cx={rotationPivot.x} cy={rotationPivot.y} />
                 </g>
@@ -236,7 +244,7 @@ export function ManipulationTool(props: ManipulationToolProps) {
                 );
             }
         } else {
-            return wrap(object)?.tool(i, props.workingState, onVertexDown, createItems);
+            return wrap(object)?.tool(i, props.workingState, props.scale, onVertexDown, createItems);
         }
     })
 

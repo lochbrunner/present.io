@@ -11,7 +11,7 @@ import Tools from '../components/tools';
 import { Grid } from '../components/grid';
 import { createTransform, ManipulationState, ManipulationTool, ScaleState, WorkingStates } from '../components/manipulation-tool';
 import Header, { useStyles } from '../components/header';
-import { addVec, Extent, minusVec, Transformation, Vector } from '../common/math';
+import { addVec, Extent, minusVec, scaleVec, Transformation, Vector } from '../common/math';
 import { AnyObject, Ellipse, LineObject, Rectangle, TextObject, createCandidate, wrap, Candidate, DrawProperties } from '../objects';
 
 import './sketchpad.scss';
@@ -58,6 +58,7 @@ interface Actions {
     move: (props: { from: number, to: number }) => void;
     updateSettings: (settings: Settings) => void;
     moveCamera: (deltaOffset: Vector) => void;
+    scaleCamera: (scale: number, deltaOffset: Vector) => void;
 }
 
 function fixedOrigin(deltaOrig: Vector, rotation: number): Vector {
@@ -111,18 +112,20 @@ function createViewBox(camera: Camera, parent: SVGSVGElement | null): string | u
         return undefined;
     }
     else {
-        const extent = { width: parent.width.baseVal.value, height: parent.height.baseVal.value };
-        const { x, y } = camera.offset;
+        const { scale, offset } = camera;
+        const extent = { width: parent.width.baseVal.value / scale, height: parent.height.baseVal.value / scale };
+        const { x, y } = offset;
         return `${x} ${y} ${extent.width} ${extent.height}`;
     }
 }
 
 function createBackground(camera: Camera, settings: Settings) {
     if (settings.background.paper) {
-        const height = `${settings.resolution.height}px`;
-        const width = `${settings.resolution.width}px`;
-        const top = `${-camera.offset.y}px`;
-        const left = `${-camera.offset.x}px`;
+        const { scale, offset } = camera;
+        const height = `${settings.resolution.height * scale}px`;
+        const width = `${settings.resolution.width * scale}px`;
+        const top = `${-offset.y * scale}px`;
+        const left = `${-offset.x * scale}px`;
         return (
             <Paper className="paper" elevation={3} style={{ height, width, top, left }} />
         );
@@ -193,11 +196,19 @@ function render(props: Props & Actions) {
         }
     };
 
-    const getMousePos = (e: React.MouseEvent<any>): Vector => {
+
+    const getMouseRawPos = (e: React.MouseEvent<any>): Vector => {
         const rect = (svgRef.current as any).getBoundingClientRect();
-        const { offset } = props.camera;
-        let x = e.clientX - rect.x + offset.x;
-        let y = e.clientY - rect.y + offset.y;
+        const x = e.clientX - rect.x;
+        const y = e.clientY - rect.y;
+        return { x, y };
+    };
+
+    const getMousePos = (e: React.MouseEvent<any>): Vector => {
+        const { offset, scale } = props.camera;
+        const raw = getMouseRawPos(e);
+        let x = raw.x / scale + offset.x;
+        let y = raw.y / scale + offset.y;
         if (e.ctrlKey) {
             // Snap to grid
             const step = props.settings.background.gridStep;
@@ -207,20 +218,14 @@ function render(props: Props & Actions) {
         return { x, y };
     };
 
-    const getMouseRawPos = (e: React.MouseEvent<any>): Vector => {
-        const rect = (svgRef.current as any).getBoundingClientRect();
-        const x = e.clientX - rect.x;
-        const y = e.clientY - rect.y;
-        return { x, y };
-    };
-
     const onMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
         if (e.altKey) {
-            const { x: curX, y: curY } = getMouseRawPos(e);
+            const currentMouse = getMouseRawPos(e);
             if (manipulationState !== null && manipulationState.type === 'move-camera') {
-                const { x, y } = manipulationState.lastMouseDown;
-                props.moveCamera({ x: x - curX, y: y - curY })
-                changeManipulationState({ type: 'move-camera', lastMouseDown: { x: curX, y: curY }, notUpdate: false });
+                const { scale } = props.camera;
+                const { lastMouseDown } = manipulationState;
+                props.moveCamera(scaleVec(minusVec(lastMouseDown, currentMouse), 1 / scale));
+                changeManipulationState({ type: 'move-camera', lastMouseDown: currentMouse, notUpdate: false });
             }
         } else {
 
@@ -303,8 +308,8 @@ function render(props: Props & Actions) {
     };
     const onMouseDown = (e: React.MouseEvent<SVGSVGElement>) => {
         if (e.altKey) {
-            const { x, y } = getMouseRawPos(e);
-            changeManipulationState({ type: 'move-camera', lastMouseDown: { x, y }, notUpdate: false });
+            const lastMouseDown = getMouseRawPos(e);
+            changeManipulationState({ type: 'move-camera', lastMouseDown, notUpdate: false });
         }
         else if (workingState !== 'select' && workingState !== 'vertex') {
             const position = getMousePos(e);
@@ -364,6 +369,19 @@ function render(props: Props & Actions) {
         if (candidate !== null) {
             changeCandidate(null);
         }
+    };
+
+    const onMouseWheel = (e: React.WheelEvent<SVGSVGElement>) => {
+        const pos = getMouseRawPos(e);
+        // p = pos / scale + offset
+        // -> pos / prevScale + prevOffset == pos / scale + offset
+        // -> pos / prevScale == pos / scale + deltaOffset
+        // -> deltaOffset = pos / prevScale - pos / scale
+        const steps = e.deltaY / 53;
+        const scale = Math.round(props.camera.scale * Math.pow(1.2, steps) * 10) / 10;
+        const { scale: prevScale } = props.camera;
+        const deltaOffset = { x: pos.x / prevScale - pos.x / scale, y: pos.y / prevScale - pos.y / scale };
+        props.scaleCamera(scale, deltaOffset);
     };
 
     const onKeyPress = (e: React.KeyboardEvent<SVGSVGElement>) => {
@@ -575,10 +593,10 @@ function render(props: Props & Actions) {
             <section className="main" style={mainStyle}>
                 {background}
                 <Grid camera={props.camera} settings={props.settings} />
-                <svg ref={svgRef} viewBox={viewBox} tabIndex={0} onKeyDown={onKeyPress} onMouseMove={onMouseMove} onMouseDown={onMouseDown} onMouseUp={onMouseUp} onMouseLeave={onMouseLeave}>
+                <svg ref={svgRef} viewBox={viewBox} tabIndex={0} onKeyDown={onKeyPress} onMouseMove={onMouseMove} onMouseDown={onMouseDown} onMouseUp={onMouseUp} onMouseLeave={onMouseLeave} onWheel={onMouseWheel}>
                     {objects}
                     {candidateObject}
-                    <ManipulationTool objects={props.objects} workingState={workingState} svgRef={svgRef.current} changeManipulationState={changeManipulationState} deleteVertex={props.deleteVertex} addVertex={props.addVertex} getMousePos={getMousePos} />
+                    <ManipulationTool objects={props.objects} workingState={workingState} scale={props.camera.scale} svgRef={svgRef.current} changeManipulationState={changeManipulationState} deleteVertex={props.deleteVertex} addVertex={props.addVertex} getMousePos={getMousePos} />
                 </svg>
             </section>
             <div className="left-menu">
@@ -641,7 +659,8 @@ const mapDispatchToProps = (dispatch: any): Actions => ({
     redo: () => dispatch(ActionCreators.redo()),
     move: (payload: { from: number, to: number }) => dispatch({ type: 'move', payload }),
     updateSettings: (settings: Settings) => dispatch({ type: 'settings', payload: settings }),
-    moveCamera: (deltaOffset: Vector) => dispatch({ type: 'move-camera', payload: deltaOffset })
+    moveCamera: (deltaOffset: Vector) => dispatch({ type: 'move-camera', payload: deltaOffset }),
+    scaleCamera: (scale: number, deltaOffset: Vector) => dispatch({ type: 'scale-camera', payload: { scale, deltaOffset } }),
 })
 
 export default connect(mapStateToProps, mapDispatchToProps)(render);
