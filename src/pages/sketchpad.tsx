@@ -50,6 +50,8 @@ interface Actions {
     selectedDelete: () => void;
     moveOrigin: (index: number, deltaUpperLeft: Vector, origin: Vector) => void;
     moveVertex: (index: number, vertexIndex: number, delta: Vector) => void;
+    deleteVertex: (index: number, vertexIndex: number) => void;
+    addVertex: (index: number, vertexIndex: number) => void;
     scale: (index: number, extent: Extent, upperLeft: Vector, origin: Vector) => void;
     undo: () => void;
     redo: () => void;
@@ -576,7 +578,7 @@ function render(props: Props & Actions) {
                 <svg ref={svgRef} viewBox={viewBox} tabIndex={0} onKeyDown={onKeyPress} onMouseMove={onMouseMove} onMouseDown={onMouseDown} onMouseUp={onMouseUp} onMouseLeave={onMouseLeave}>
                     {objects}
                     {candidateObject}
-                    <ManipulationTool objects={props.objects} workingState={workingState} svgRef={svgRef.current} changeManipulationState={changeManipulationState} getMousePos={getMousePos} />
+                    <ManipulationTool objects={props.objects} workingState={workingState} svgRef={svgRef.current} changeManipulationState={changeManipulationState} deleteVertex={props.deleteVertex} addVertex={props.addVertex} getMousePos={getMousePos} />
                 </svg>
             </section>
             <div className="left-menu">
@@ -623,6 +625,8 @@ const mapDispatchToProps = (dispatch: any): Actions => ({
     deselectAll: () => dispatch({ type: 'deselect-all' }),
     moveOrigin: (index: number, deltaUpperLeft: Vector, origin: Vector) => dispatch({ type: 'move-origin', payload: { index, deltaUpperLeft, origin } }),
     moveVertex: (index: number, vertexIndex: number, delta: Vector) => dispatch({ type: 'move-vertex', payload: { index, vertexIndex, delta } }),
+    deleteVertex: (index: number, vertexIndex: number) => dispatch({ type: 'delete-vertex', payload: { index, vertexIndex } }),
+    addVertex: (index: number, vertexIndex: number) => dispatch({ type: 'add-vertex', payload: { index, vertexIndex } }),
     selectedSetProperty: (name: string, value: any) => dispatch({ type: 'selected-set-property', payload: { name, value } }),
     selectedFillColor: (color: Color) => dispatch({ type: 'selected-fill-color', payload: color }),
     selectedBorderColor: (color: Color) => dispatch({ type: 'selected-border-color', payload: color }),

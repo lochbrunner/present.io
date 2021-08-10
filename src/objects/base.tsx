@@ -55,4 +55,13 @@ export class BaseWrapper {
     moveVertex(vertexIndex: number, delta: Vector) {
         throw 'not implemented yet!';
     }
+
+    /** Add new vertex after specified index */
+    addVertex(vertexIndex: number): AnyObject | undefined {
+        throw 'not implemented yet!';
+    }
+
+    deleteVertex(vertexIndex: number): AnyObject | undefined {
+        throw 'not implemented yet!';
+    }
 }

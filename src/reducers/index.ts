@@ -139,6 +139,24 @@ export default (state: State = initState(), action: Action) => {
                 }
                 return { ...state, objects: [...state.objects.slice(0, index), createObject(prevObject), ...state.objects.slice(index + 1)] }
             }
+        case 'delete-vertex':
+            {
+                const { index, vertexIndex } = (action.payload as any);
+                const prevObject = state.objects[index];
+                const createObject = (o: AnyObject): AnyObject => {
+                    return wrap(o)?.deleteVertex(vertexIndex) || { ...o };
+                }
+                return { ...state, objects: [...state.objects.slice(0, index), createObject(prevObject), ...state.objects.slice(index + 1)] }
+            }
+        case 'add-vertex':
+            {
+                const { index, vertexIndex } = (action.payload as any);
+                const prevObject = state.objects[index];
+                const createObject = (o: AnyObject): AnyObject => {
+                    return wrap(o)?.addVertex(vertexIndex) || { ...o };
+                }
+                return { ...state, objects: [...state.objects.slice(0, index), createObject(prevObject), ...state.objects.slice(index + 1)] }
+            }
         case 'move':
             {
                 const { from, to } = (action.payload as any);

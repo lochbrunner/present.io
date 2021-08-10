@@ -43,6 +43,8 @@ export class PolygonWrapper extends BaseWrapper {
         return this.data;
     }
 
+    // UI
+
     renderCandidate(): JSX.Element {
         const { data } = this;
         const points = data.points.map(p => `${p.x},${p.y}`).join(' ');
@@ -87,6 +89,8 @@ export class PolygonWrapper extends BaseWrapper {
         }
     }
 
+    // Reducer
+
     move(delta: Vector): PolygonObject | undefined {
         return { ...this.data, points: this.data.points.map(p => addVec(p, delta)), origin: addVec(this.data.origin, delta) };
     }
@@ -111,6 +115,22 @@ export class PolygonWrapper extends BaseWrapper {
     moveVertex(vertexIndex: number, delta: Vector) {
         return {
             ...this.data, points: this.data.points.map((p, i) => i === vertexIndex ? addVec(p, delta) : p)
+        };
+    }
+
+    /** Add new vertex after specified index */
+    addVertex(vertexIndex: number): PolygonObject | undefined {
+        const prevPoint = { ...this.data.points[vertexIndex] };
+        const points = [...this.data.points]
+        points.splice(vertexIndex, 0, prevPoint);
+        return {
+            ...this.data, points
+        };
+    }
+
+    deleteVertex(vertexIndex: number): PolygonObject | undefined {
+        return {
+            ...this.data, points: this.data.points.filter((p, i) => i !== vertexIndex)
         };
     }
 

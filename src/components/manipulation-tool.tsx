@@ -53,12 +53,26 @@ interface MoveVertexState {
     lastMouseDown: Vector;
 }
 
+interface DeleteVertexState {
+    type: 'delete-vertex';
+    index: number;
+    vertexIndex: number;
+}
+
+interface AddVertexState {
+    type: 'add-vertex';
+    index: number;
+    rotation: number;
+    vertexIndex: number;
+    lastMouseDown: Vector;
+}
+
 interface MoveCameraState {
     type: 'move-camera';
     lastMouseDown: Vector;
 }
 
-export type ManipulationState = (MoveState | ScaleState | RotateState | MoveOriginState | MoveVertexState | MoveCameraState) & {
+export type ManipulationState = (MoveState | ScaleState | RotateState | MoveOriginState | MoveVertexState | DeleteVertexState | AddVertexState | MoveCameraState) & {
     notUpdate: boolean;
 } | null;
 
@@ -69,13 +83,23 @@ export const toolStyle = {
     r: 6
 };
 
-export function ManipulationTool(props: { objects: AnyObject[], workingState: WorkingStates, svgRef: SVGSVGElement | null, changeManipulationState: (prop: ManipulationState) => void, getMousePos: (e: React.MouseEvent<any>) => Vector }) {
+export interface ManipulationToolProps {
+    objects: AnyObject[];
+    workingState: WorkingStates;
+    svgRef: SVGSVGElement | null;
+    changeManipulationState: (prop: ManipulationState) => void;
+    getMousePos: (e: React.MouseEvent<any>) => Vector;
+    deleteVertex: (index: number, vertexIndex: number) => void;
+    addVertex: (index: number, vertexIndex: number) => void;
+}
+
+export function ManipulationTool(props: ManipulationToolProps) {
     const onScaleDown = (index: number, dirX: ScaleState['dirX'], dirY: ScaleState['dirY'], extent: Extent, upperLeft: Vector, rotation: number, dir: number, origin: Vector) => (e: React.MouseEvent<any>) => {
         e.stopPropagation();
-        const { x, y } = props.getMousePos(e);
+        const firstMouseDown = props.getMousePos(e);
         props.changeManipulationState({
             type: 'scale',
-            firstMouseDown: { x, y },
+            firstMouseDown,
             origExtent: extent,
             origUpperLeft: upperLeft,
             origOrigin: origin,
@@ -90,10 +114,10 @@ export function ManipulationTool(props: { objects: AnyObject[], workingState: Wo
 
     const onRotateDown = (index: number, rotationCenter: Vector, origRotation: number) => (e: React.MouseEvent<any>) => {
         e.stopPropagation();
-        const { x, y } = props.getMousePos(e);
+        const firstMouseDown = props.getMousePos(e);
         props.changeManipulationState({
             type: 'rotate',
-            firstMouseDown: { x, y },
+            firstMouseDown,
             notUpdate: true,
             rotationCenter,
             index,
@@ -103,10 +127,10 @@ export function ManipulationTool(props: { objects: AnyObject[], workingState: Wo
 
     const onOriginDown = (index: number, origOrigin: Vector, rotation: number) => (e: React.MouseEvent<any>) => {
         e.stopPropagation();
-        const { x, y } = props.getMousePos(e);
+        const lastMouseDown = props.getMousePos(e);
         props.changeManipulationState({
             type: 'move-origin',
-            lastMouseDown: { x, y },
+            lastMouseDown,
             origOrigin,
             index,
             rotation,
@@ -116,15 +140,22 @@ export function ManipulationTool(props: { objects: AnyObject[], workingState: Wo
 
     const onVertexDown = (index: number, vertexIndex: number, rotation: number) => (e: React.MouseEvent<any>) => {
         e.stopPropagation();
-        const { x, y } = props.getMousePos(e);
-        props.changeManipulationState({
-            type: 'move-vertex',
-            lastMouseDown: { x, y },
-            index,
-            rotation,
-            vertexIndex,
-            notUpdate: true,
-        });
+        const lastMouseDown = props.getMousePos(e);
+        if (e.shiftKey) {
+            props.deleteVertex(index, vertexIndex);
+        } else {
+            if (e.ctrlKey) {
+                props.addVertex(index, vertexIndex);
+            }
+            props.changeManipulationState({
+                type: 'move-vertex',
+                lastMouseDown,
+                index,
+                rotation,
+                vertexIndex,
+                notUpdate: true,
+            });
+        }
     };
 
     const resizeLineStyle = {
