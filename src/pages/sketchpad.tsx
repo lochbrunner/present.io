@@ -435,6 +435,9 @@ function render(props: Props & Actions) {
                 props.redo();
             }
         } else {
+            if (e.key === 'Escape' && candidate !== null) {
+                changeCandidate(null);
+            }
             if (e.key === 'Delete') {
                 props.selectedDelete();
             } else if (e.key === 'Enter') {
