@@ -1,0 +1,26 @@
+version: "2.2"  # optional since v1.27.0
+services:
+  server:
+    image: present.io:fat
+    environment:
+      - DB_HOST=database
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=pas123
+    command: 
+      - '--create-database'
+    ports:
+      - "3001:3000"
+    links:
+      - database
+    restart: "on-failure"
+
+  database:
+    image: mysql
+    environment:
+    - MYSQL_ROOT_PASSWORD=pas123
+    - MYSQL_DATABASE=main
+    volumes:
+      - database_volume:/var/lib/mysql
+volumes:
+  database_volume: {}
