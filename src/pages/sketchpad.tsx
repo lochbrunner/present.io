@@ -11,6 +11,7 @@ import Tools from '../components/tools';
 import { Grid } from '../components/grid';
 import { createTransform, ManipulationState, ManipulationTool, ScaleState, WorkingStates } from '../components/manipulation-tool';
 import Header, { useStyles } from '../components/header';
+import { UploadDialog } from '../components/upload-dialog';
 import { addVec, Extent, minusVec, scaleVec, Transformation, Vector } from '../common/math';
 import { AnyObject, Ellipse, LineObject, Rectangle, TextObject, createCandidate, wrap, Candidate, DrawProperties } from '../objects';
 
@@ -59,6 +60,7 @@ interface Actions {
     updateSettings: (settings: Settings) => void;
     moveCamera: (deltaOffset: Vector) => void;
     scaleCamera: (scale: number, deltaOffset: Vector) => void;
+    setSnapshot: (objects: AnyObject[]) => void;
 }
 
 function fixedOrigin(deltaOrig: Vector, rotation: number): Vector {
@@ -181,6 +183,8 @@ function render(props: Props & Actions) {
         radiusY: 0
     });
 
+    const [uploadDialogOpen, setUploadDialogOpen] = React.useState<boolean>(false);
+
     const download = () => {
         const { current } = svgRef;
         if (current !== null) {
@@ -196,6 +200,20 @@ function render(props: Props & Actions) {
         }
     };
 
+    const downloadSnapshot = () => {
+        const data = JSON.stringify(props.objects);
+        asDownload(data, 'document.json');
+    };
+    const uploadSnapshot = () => {
+        setUploadDialogOpen(true);
+    };
+
+    const onUploadSnapshot = (content?: string) => {
+        if (content !== undefined) {
+            setUploadDialogOpen(false);
+            props.setSnapshot(JSON.parse(content));
+        }
+    }
 
     const getMouseRawPos = (e: React.MouseEvent<any>): Vector => {
         const rect = (svgRef.current as any).getBoundingClientRect();
@@ -591,7 +609,8 @@ function render(props: Props & Actions) {
 
     return (
         <div className={`sketchpad ${classes.root}`} >
-            <Header download={download} undo={props.undo} redo={props.redo} hasFuture={props.hasFuture} hasPast={props.hasPast} settings={props.settings} updateSettings={props.updateSettings} />
+            <Header download={download} undo={props.undo} redo={props.redo} hasFuture={props.hasFuture} hasPast={props.hasPast} settings={props.settings}
+                updateSettings={props.updateSettings} downloadSnapshot={downloadSnapshot} uploadSnapshot={uploadSnapshot} />
             <Tools workingState={workingState} changeWorkingState={changeWorkingState} />
             <section className="main" style={mainStyle}>
                 {background}
@@ -606,6 +625,7 @@ function render(props: Props & Actions) {
                 {propBox}
                 <Outliner objects={props.objects} selectedDelete={props.selectedDelete} move={props.move} select={props.select} changeSelect={props.changeSelect} />
             </div>
+            <UploadDialog onClose={onUploadSnapshot} onAbort={() => { setUploadDialogOpen(false); }} open={uploadDialogOpen} />
         </div>
     )
 }
@@ -664,6 +684,7 @@ const mapDispatchToProps = (dispatch: any): Actions => ({
     updateSettings: (settings: Settings) => dispatch({ type: 'settings', payload: settings }),
     moveCamera: (deltaOffset: Vector) => dispatch({ type: 'move-camera', payload: deltaOffset }),
     scaleCamera: (scale: number, deltaOffset: Vector) => dispatch({ type: 'scale-camera', payload: { scale, deltaOffset } }),
+    setSnapshot: (objects: AnyObject[]) => dispatch({ type: 'set-snapshot', payload: objects })
 })
 
 export default connect(mapStateToProps, mapDispatchToProps)(render);

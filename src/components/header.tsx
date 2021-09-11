@@ -1,5 +1,5 @@
 import React from 'react';
-import { createStyles, makeStyles, Theme, Typography } from '@material-ui/core';
+import { createStyles, ListItemIcon, ListItemText, makeStyles, Menu, MenuItem, MenuProps, Theme, Typography, withStyles } from '@material-ui/core';
 import AppBar from '@material-ui/core/AppBar';
 import Toolbar from '@material-ui/core/Toolbar';
 import RedoIcon from '@material-ui/icons/Redo';
@@ -7,6 +7,10 @@ import IconButton from '@material-ui/core/IconButton';
 import UndoIcon from '@material-ui/icons/Undo';
 import SaveAltIcon from '@material-ui/icons/SaveAlt';
 import MenuIcon from '@material-ui/icons/Menu';
+
+import PublishIcon from '@material-ui/icons/Publish';
+import GetAppIcon from '@material-ui/icons/GetApp';
+import SettingsIcon from '@material-ui/icons/Settings';
 
 
 import './header.scss';
@@ -27,6 +31,37 @@ export const useStyles = makeStyles((theme: Theme) =>
     }),
 );
 
+const StyledMenu = withStyles({
+    paper: {
+        border: '1px solid #d3d4d5',
+    },
+})((props: MenuProps) => (
+    <Menu
+        elevation={0}
+        getContentAnchorEl={null}
+        anchorOrigin={{
+            vertical: 'bottom',
+            horizontal: 'center',
+        }}
+        transformOrigin={{
+            vertical: 'top',
+            horizontal: 'center',
+        }}
+        {...props}
+    />
+));
+
+const StyledMenuItem = withStyles((theme) => ({
+    root: {
+        '&:focus': {
+            backgroundColor: theme.palette.primary.main,
+            '& .MuiListItemIcon-root, & .MuiListItemText-primary': {
+                color: theme.palette.common.white,
+            },
+        },
+    },
+}))(MenuItem);
+
 export interface Props {
     undo: () => void;
     redo: () => void;
@@ -35,6 +70,8 @@ export interface Props {
     hasPast: boolean;
     settings: Settings;
     updateSettings: (settings: Settings) => void;
+    downloadSnapshot: () => void;
+    uploadSnapshot: () => void;
 }
 
 
@@ -42,8 +79,29 @@ export default function render(props: Props) {
     const classes = useStyles();
     const [openSettings, setOpenSettings] = React.useState(false);
 
+    const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+
+    const openMenu = (event: React.MouseEvent<HTMLButtonElement>) => {
+        setAnchorEl(event.currentTarget);
+    };
+
+    const handleClose = () => {
+        setAnchorEl(null);
+    };
+
+    const downloadSnapshot = () => {
+        props.downloadSnapshot();
+        handleClose();
+    }
+
+    const uploadSnapshot = () => {
+        props.uploadSnapshot();
+        handleClose();
+    }
+
     const handleClickOpenSettings = () => {
         setOpenSettings(true);
+        handleClose();
     };
 
     const handleCloseSettings = (settings: Settings) => {
@@ -56,9 +114,35 @@ export default function render(props: Props) {
     return (
         <AppBar position="static">
             <Toolbar>
-                <IconButton edge="start" className={classes.menuButton} color="inherit" aria-label="menu" onClick={handleClickOpenSettings} >
+                <IconButton edge="start" className={classes.menuButton} color="inherit" aria-label="menu" onClick={openMenu} >
                     <MenuIcon />
                 </IconButton>
+                <StyledMenu
+                    id="menu"
+                    anchorEl={anchorEl}
+                    keepMounted
+                    open={Boolean(anchorEl)}
+                    onClose={handleClose}
+                >
+                    <StyledMenuItem onClick={downloadSnapshot}>
+                        <ListItemIcon>
+                            <GetAppIcon fontSize="small" />
+                        </ListItemIcon>
+                        <ListItemText primary="Download Snapshot" />
+                    </StyledMenuItem>
+                    <StyledMenuItem onClick={uploadSnapshot}>
+                        <ListItemIcon>
+                            <PublishIcon fontSize="small" />
+                        </ListItemIcon>
+                        <ListItemText primary="Upload Snapshot" />
+                    </StyledMenuItem>
+                    <StyledMenuItem onClick={handleClickOpenSettings}>
+                        <ListItemIcon>
+                            <SettingsIcon fontSize="small" />
+                        </ListItemIcon>
+                        <ListItemText primary="Settings" />
+                    </StyledMenuItem>
+                </StyledMenu>
                 <SettingsDialog settings={props.settings} onClose={handleCloseSettings} onAbort={handleAbortSettings} open={openSettings} />
                 <Typography variant="h6" className={classes.title}>
                     Present IO

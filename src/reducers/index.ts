@@ -188,6 +188,10 @@ export default (state: State = initState(), action: Action) => {
             const settings = (action.payload as any);
             return { ...state, settings };
         }
+        case 'set-snapshot': {
+            const objects = (action.payload as any);
+            return { ...state, objects }
+        }
         case 'move-camera': {
             const deltaOffset = (action.payload as any);
             return { ...state, camera: { ...state.camera, offset: add(deltaOffset, state.camera.offset) } };
