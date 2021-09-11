@@ -9,13 +9,13 @@ GET http://localhost:3000/api/slides
 
 ###
 
-GET http://localhost:3000/api/slide/7
+GET http://localhost:3000/api/slide/1
 
 
 
 ###
 
-PUT http://localhost:3001/api/slide
+PUT http://localhost:3000/api/slide
 
 
 

@@ -1,9 +1,9 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -24,21 +24,6 @@ func getenv(key, fallback string) string {
 type Slide struct {
 	ID   uint `gorm:"primaryKey"`
 	Data string
-}
-
-var availableSlides [2]Slide = [2]Slide{
-	{Data: ""},
-	{Data: ""},
-}
-
-func allSlides(responseWriter http.ResponseWriter, request *http.Request) {
-	availableSlidesJSON, err := json.Marshal(availableSlides)
-
-	if err != nil {
-		panic("Could not marshal json.")
-	}
-
-	fmt.Fprintf(responseWriter, string(availableSlidesJSON))
 }
 
 func getDbConnection() *gorm.DB {
@@ -73,22 +58,22 @@ func updateSlide(responseWriter http.ResponseWriter, request *http.Request) {
 	if !ok {
 		fmt.Println("id is missing in parameters")
 	}
-	var slide Slide
 	db := getDbConnection()
 
 	// Try to decode the request body into the struct. If there is an error,
 	// respond to the client with the error message and a 400 status code.
-	err := json.NewDecoder(request.Body).Decode(&slide)
+	defer request.Body.Close()
+	body, err := ioutil.ReadAll(request.Body)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), http.StatusBadRequest)
 		return
 	}
 	query := fmt.Sprintf("%v", id)
-	db.Model(&Slide{}).Where(query, true).Update("data", slide.Data)
+	db.Model(&Slide{}).Where(query, true).Update("data", string(body))
 }
 
 func createSlide(responseWriter http.ResponseWriter, request *http.Request) {
-	var slide = Slide{Data: "{}"}
+	var slide = Slide{Data: "[]"}
 	db := getDbConnection()
 	db.Create(&slide)
 	fmt.Fprintf(responseWriter, fmt.Sprint(slide.ID))
@@ -100,24 +85,24 @@ func initDb(db gorm.DB) {
 
 func main() {
 	var createDb = flag.Bool("create-database", false, "Creates empty database if set")
-
+	var port = flag.Int("port", 3000, "Port to listen")
 	flag.Parse()
+
 	if *createDb {
 		log.Println("Creating fresh database")
 		db := getDbConnection()
 		initDb(*db)
 	}
 
-	fs := http.FileServer(http.Dir("./docs"))
-
 	r := mux.NewRouter()
 	r.HandleFunc("/api/slide/{id}", getSlide).Methods("GET")
 	r.HandleFunc("/api/slide/{id}", updateSlide).Methods("POST")
 	r.HandleFunc("/api/slide", createSlide).Methods("PUT")
-	r.HandleFunc("/api/allslides/{searchTerm}", allSlides)
+	fs := http.FileServer(http.Dir("./docs"))
 	r.PathPrefix("/").Handler(fs)
-	err := http.ListenAndServe(":3000", r)
-	log.Println("Listening on :3000...")
+
+	log.Printf("Listening on :%d...", *port)
+	err := http.ListenAndServe(fmt.Sprintf(":%d", *port), r)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -11,6 +11,7 @@ import MenuIcon from '@material-ui/icons/Menu';
 import PublishIcon from '@material-ui/icons/Publish';
 import GetAppIcon from '@material-ui/icons/GetApp';
 import SettingsIcon from '@material-ui/icons/Settings';
+import SaveIcon from '@material-ui/icons/Save';
 
 
 import './header.scss';
@@ -72,6 +73,7 @@ export interface Props {
     updateSettings: (settings: Settings) => void;
     downloadSnapshot: () => void;
     uploadSnapshot: () => void;
+    saveSnapshot: () => void;
 }
 
 
@@ -96,6 +98,11 @@ export default function render(props: Props) {
 
     const uploadSnapshot = () => {
         props.uploadSnapshot();
+        handleClose();
+    }
+
+    const saveSnapshot = () => {
+        props.saveSnapshot();
         handleClose();
     }
 
@@ -124,6 +131,12 @@ export default function render(props: Props) {
                     open={Boolean(anchorEl)}
                     onClose={handleClose}
                 >
+                    <StyledMenuItem onClick={saveSnapshot}>
+                        <ListItemIcon>
+                            <SaveIcon fontSize="small" />
+                        </ListItemIcon>
+                        <ListItemText primary="Save Snapshot" />
+                    </StyledMenuItem>
                     <StyledMenuItem onClick={downloadSnapshot}>
                         <ListItemIcon>
                             <GetAppIcon fontSize="small" />

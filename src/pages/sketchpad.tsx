@@ -16,12 +16,13 @@ import { addVec, Extent, minusVec, scaleVec, Transformation, Vector } from '../c
 import { AnyObject, Ellipse, LineObject, Rectangle, TextObject, createCandidate, wrap, Candidate, DrawProperties } from '../objects';
 
 import './sketchpad.scss';
+import { useParams } from 'react-router-dom';
 
-function asDownload(text: string, filename: string) {
-    const a = document.createElement("a");
+function asDownload(text: string, filename: string, type: string) {
+    const a = document.createElement('a');
     document.body.appendChild(a);
-    a.style.display = "none";
-    const blob = new Blob([text], { type: "image/svg+xml" });
+    a.style.display = 'none';
+    const blob = new Blob([text], { type });
     const url = window.URL.createObjectURL(blob);
     a.href = url;
     a.download = filename;
@@ -183,6 +184,15 @@ function render(props: Props & Actions) {
         radiusY: 0
     });
 
+    const { slide } = useParams<{ slide?: string }>();
+    const [isLoaded, loaded] = React.useState<boolean>(false);
+    if (slide !== undefined && !isLoaded) {
+        fetch(`./api/slide/${slide}`, { method: 'GET' }).then(response => response.json()).then(data => {
+            loaded(true);
+            props.setSnapshot(data);
+        })
+    }
+
     const [uploadDialogOpen, setUploadDialogOpen] = React.useState<boolean>(false);
 
     const download = () => {
@@ -196,13 +206,13 @@ function render(props: Props & Actions) {
             }
 
             const code = `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 ${width} ${height}">${image.innerHTML}</svg>`;
-            asDownload(code, 'document.svg');
+            asDownload(code, 'document.svg', 'image/svg+xml');
         }
     };
 
     const downloadSnapshot = () => {
         const data = JSON.stringify(props.objects);
-        asDownload(data, 'document.json');
+        asDownload(data, 'document.json', 'application/json');
     };
     const uploadSnapshot = () => {
         setUploadDialogOpen(true);
@@ -214,6 +224,14 @@ function render(props: Props & Actions) {
             props.setSnapshot(JSON.parse(content));
         }
     }
+
+    const saveSnapshot = () => {
+        if (!isLoaded || slide === undefined) {
+            console.warn('Can not update snapshot when it is not loaded from server!');
+            return;
+        }
+        fetch(`./api/slide/${slide}`, { method: 'POST', body: JSON.stringify(props.objects) });
+    };
 
     const getMouseRawPos = (e: React.MouseEvent<any>): Vector => {
         const rect = (svgRef.current as any).getBoundingClientRect();
@@ -610,7 +628,7 @@ function render(props: Props & Actions) {
     return (
         <div className={`sketchpad ${classes.root}`} >
             <Header download={download} undo={props.undo} redo={props.redo} hasFuture={props.hasFuture} hasPast={props.hasPast} settings={props.settings}
-                updateSettings={props.updateSettings} downloadSnapshot={downloadSnapshot} uploadSnapshot={uploadSnapshot} />
+                updateSettings={props.updateSettings} downloadSnapshot={downloadSnapshot} uploadSnapshot={uploadSnapshot} saveSnapshot={saveSnapshot} />
             <Tools workingState={workingState} changeWorkingState={changeWorkingState} />
             <section className="main" style={mainStyle}>
                 {background}
