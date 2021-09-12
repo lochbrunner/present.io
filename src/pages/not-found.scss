@@ -1,0 +1,29 @@
+body {
+    margin: 0;
+}
+
+.not-found {
+    div.content {
+        margin: auto;
+        width: 600px;
+
+        h1 {
+            margin: 100px 0 50px;
+            font-weight: 200;
+            font-size: 3em;
+            color: #444;
+        }
+
+        a {
+            text-decoration: none;
+            color: #1976d2;
+            &:hover {
+                text-decoration: underline;
+            }
+        }
+
+        section {
+            margin-top: 100px;
+        }
+    }
+}

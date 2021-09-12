@@ -16,7 +16,7 @@ import { addVec, Extent, minusVec, scaleVec, Transformation, Vector } from '../c
 import { AnyObject, Ellipse, LineObject, Rectangle, TextObject, createCandidate, wrap, Candidate, DrawProperties } from '../objects';
 
 import './sketchpad.scss';
-import { useParams } from 'react-router-dom';
+import { useHistory, useParams } from 'react-router-dom';
 
 function asDownload(text: string, filename: string, type: string) {
     const a = document.createElement('a');
@@ -183,14 +183,15 @@ function render(props: Props & Actions) {
         radiusX: 0,
         radiusY: 0
     });
+    const history = useHistory();
 
     const { slide } = useParams<{ slide?: string }>();
-    const [isLoaded, loaded] = React.useState<boolean>(false);
-    if (slide !== undefined && !isLoaded) {
+    const [isLoaded, loaded] = React.useState<string | undefined>(undefined);
+    if (slide !== isLoaded) {
         fetch(`./api/slide/${slide}`, { method: 'GET' }).then(response => response.json()).then(data => {
-            loaded(true);
+            loaded(slide);
             props.setSnapshot(data);
-        })
+        }).catch(error => history.push(`/error-404/${slide}`))
     }
 
     const [uploadDialogOpen, setUploadDialogOpen] = React.useState<boolean>(false);

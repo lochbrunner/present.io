@@ -10,7 +10,7 @@ services:
     command: 
       - '--create-database'
     ports:
-      - "3001:3000"
+      - "3000:3000"
     links:
       - database
     restart: "on-failure"
