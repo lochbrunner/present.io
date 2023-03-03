@@ -7,25 +7,17 @@ import NotFoundError from './pages/not-found';
 
 import { Provider } from 'react-redux';
 import createStore from './store';
-import { Route, Router, Switch } from 'react-router-dom';
-import { createHashHistory } from "history";
+import { Route, HashRouter as Router, Routes } from 'react-router-dom';
 
-const history = createHashHistory();
 
 ReactDOM.render(
     <Provider store={createStore}>
-        <Router history={history}>
-            <Switch>
-                <Route exact path="/new">
-                    <New />
-                </Route>
-                <Route exact path="/error-404/:slide">
-                    <NotFoundError />
-                </Route>
-                <Route exact path="/:slide?">
-                    <Page />
-                </Route>
-            </Switch>
+        <Router>
+            <Routes>
+                <Route path="/new" element={<New />} />
+                <Route path="/error-404/:slide" element={<NotFoundError />} />
+                <Route path="/:slide?" element={<Page />} />
+            </Routes>
         </Router>
     </Provider>,
 

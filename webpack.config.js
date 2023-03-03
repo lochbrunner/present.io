@@ -1,25 +1,25 @@
 
-var webpack = require('webpack');
-var path = require('path');
+const webpack = require('webpack');
+const path = require('path');
 
 // variables
-var isProduction = process.env.NODE_ENV === 'production'
-var sourcePath = path.join(__dirname, './src');
-var dataPath = path.join(__dirname, './data');
-var outPath = path.join(__dirname, './docs');
+const isProduction = process.env.NODE_ENV === 'production'
+const sourcePath = path.join(__dirname, './src');
+const dataPath = path.join(__dirname, './data');
+const outPath = process.env.GITHUB ? path.join(__dirname, './_site') : path.join(__dirname, './docs');
 
 // plugins
-var HtmlWebpackPlugin = require('html-webpack-plugin');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const ReactRefreshWebpackPlugin =
-    require('@pmmmwh/react-refresh-webpack-plugin');
+  require('@pmmmwh/react-refresh-webpack-plugin');
 
 module.exports = {
   context: sourcePath,
-  entry: {app: './index.tsx', vendor: ['react', 'react-dom', 'redux']},
+  entry: { app: './index.tsx', vendor: ['react', 'react-dom', 'redux'] },
   output: {
     path: outPath,
-    publicPath: isProduction ? './': '/',
+    publicPath: isProduction ? './' : '/',
     filename: '[name].js',
   },
   // optimization: {
@@ -45,8 +45,8 @@ module.exports = {
       // .ts, .tsx
       {
         test: /\.tsx?$/,
-        use: isProduction ? 'awesome-typescript-loader?module=es6' :
-                            ['awesome-typescript-loader']
+        use: 'ts-loader',
+        exclude: /node_modules/,
       },
       // scss
       {
@@ -61,9 +61,10 @@ module.exports = {
         ],
       },
       // static assets
-      {test: /\.html$/, use: 'html-loader'},
-      {test: /\.(a?png|svg)$/, use: 'url-loader?limit=10000'}, 
-      {test: /\.(ttf|woff|woff2)$/, use: 'file-loader'
+      { test: /\.html$/, use: 'html-loader' },
+      { test: /\.(a?png|svg)$/, use: 'url-loader?limit=10000' },
+      {
+        test: /\.(ttf|woff|woff2)$/, use: 'file-loader'
       }
     ]
   },
@@ -73,14 +74,14 @@ module.exports = {
       filename: !isProduction ? '[name].css' : '[name].[hash].css',
       chunkFilename: !isProduction ? '[id].css' : '[id].[hash].css',
     }),
-    new HtmlWebpackPlugin({template: 'index.html'}),
+    new HtmlWebpackPlugin({ template: 'index.html' }),
     new ReactRefreshWebpackPlugin(),
   ],
   devtool: 'eval-source-map',
   devServer: {
     contentBase: [dataPath],
     hot: true,
-    stats: {warnings: false},
+    stats: { warnings: false },
     proxy: {
       '/api': 'http://localhost:3000'
     }

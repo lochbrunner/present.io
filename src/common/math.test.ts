@@ -2,14 +2,6 @@ import { Transformation } from './math';
 import { toBeDeepCloseTo, toMatchCloseTo } from 'jest-matcher-deep-close-to';
 expect.extend({ toBeDeepCloseTo, toMatchCloseTo });
 
-declare global {
-    namespace jest {
-        interface Matchers<R, T> {
-            toBeDeepCloseTo(expected: T, precision: number): CustomMatcherResult
-        }
-    }
-}
-
 test('just scaling', () => {
     const a = { x: 1, y: 2 };
     const rotation = 0;

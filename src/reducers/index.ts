@@ -1,7 +1,7 @@
 
 import { initState, State } from '../store';
 import { AnyObject, Rectangle, wrap } from '../objects';
-import arrayMove from 'array-move';
+import { arrayMoveImmutable } from 'array-move';
 import { addVec, Vector } from '../common/math';
 
 export interface ChangeSelection {
@@ -160,7 +160,7 @@ export default (state: State = initState(), action: Action) => {
         case 'move':
             {
                 const { from, to } = (action.payload as any);
-                return { ...state, objects: arrayMove(state.objects, from, to) };
+                return { ...state, objects: arrayMoveImmutable(state.objects, from, to) };
             }
         case 'scale': {
             const { origin, upperLeft, extent, index } = (action.payload as any);

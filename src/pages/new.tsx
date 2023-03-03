@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { connect } from 'react-redux';
 import { StateWithHistory } from 'redux-undo';
 import { State as RootState } from 'store';
-import { useHistory } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 interface Actions {
 
@@ -12,12 +12,12 @@ interface Props {
 }
 function render(props: Props & Actions) {
     // Create new document
-    const history = useHistory();
+    const navigate = useNavigate();
     useEffect(() => {
         fetch('./api/slide', {
             method: 'PUT'
         }).then(response => response.json()).then((slide: number) => {
-            history.push(`/${slide}`);
+            navigate(`/${slide}`);
         });
     });
 
